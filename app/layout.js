@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import ProfileMenu from "@/components/profile-menu";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -22,6 +23,13 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  const user = {
+    name: "Pippo Rossi",
+    role: "USER",
+    username: "PIPPO",
+  };
+  // const user = null
+
   return (
     <html
       lang="it"
@@ -68,6 +76,25 @@ export default function RootLayout({ children }) {
                 >
                   Launch Sites
                 </Link>
+
+                {user ? (
+                  <ProfileMenu user={user} />
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href="/login"
+                      className="transition hover:text-cyan-400"
+                    >
+                      Login
+                    </Link>
+                    <Link
+                      href="/register"
+                      className="rounded-xl bg-cyan-500 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-400"
+                    >
+                      Registrati
+                    </Link>
+                  </div>
+                )}
               </nav>
             </div>
           </header>
