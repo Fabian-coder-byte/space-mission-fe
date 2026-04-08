@@ -1,6 +1,15 @@
-// app/(admin)/layout.js
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+const navItems = [
+  { href: "/admin", label: "Dashboard" },
+  { href: "/admin/missions", label: "Missioni" },
+  { href: "/admin/rockets", label: "Razzi" },
+  { href: "/admin/agencies", label: "Agenzie" },
+  { href: "/admin/launch-sites", label: "Launch Sites" },
+  { href: "/admin/users", label: "Utenti" },
+  { href: "/admin/settings", label: "Impostazioni" },
+];
 
 export default async function AdminLayout({ children }) {
   const user = {
@@ -13,21 +22,42 @@ export default async function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto flex max-w-7xl gap-6 px-6 py-8">
-        <aside className="w-72 rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-          <h2 className="text-xl font-semibold">Admin</h2>
+      <header className="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
+        <div className="flex items-center justify-between px-4 py-4 md:px-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
+              Admin Panel
+            </p>
+            <h1 className="text-lg font-semibold">Space Mission Admin</h1>
+          </div>
 
-          <nav className="mt-6 flex flex-col gap-3 text-sm">
-            <Link href="/admin">Dashboard</Link>
-            <Link href="/admin/missions">Missioni</Link>
-            <Link href="/admin/rockets">Razzi</Link>
-            <Link href="/admin/agencies">Agenzie</Link>
-            <Link href="/admin/launch-sites">Launch Sites</Link>
-          </nav>
-        </aside>
+          <div className="flex items-center gap-4 text-sm text-slate-400">
+            <span>{user.username}</span>
+            <Link
+              href="/"
+              className="rounded-xl border border-slate-700 px-4 py-2 text-slate-300 transition hover:bg-slate-800 hover:text-white"
+            >
+              Vai al sito
+            </Link>
+          </div>
+        </div>
 
-        <section className="flex-1">{children}</section>
-      </div>
+        <nav className="overflow-x-auto border-t border-slate-800 px-4 py-3 md:px-6">
+          <div className="flex min-w-max gap-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-xl px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </header>
+
+      <main className="p-4 md:p-6">{children}</main>
     </div>
   );
 }
