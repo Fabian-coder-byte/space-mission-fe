@@ -1,508 +1,353 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
 
-const missionStatusOptions = [
-  "SCHEDULED",
-  "PLANNED",
-  "LAUNCHED",
-  "COMPLETED",
-  "DELAYED",
-  "CANCELED",
-  "FAILED",
-];
-
-const missionTypeOptions = [
-  "ORBITAL",
-  "SUBORBITAL",
-  "LUNAR",
-  "PLANETARY",
-  "CREWED",
-  "CARGO",
-  "SPACE_STATION",
-  "TELESCOPE",
-  "TEST_FLIGHT",
-];
-
-const initialForm = {
-  name: "",
-  slug: "",
-  description: "",
-  missionType: "",
+const mission = {
+  id: "1",
+  name: "Artemis II",
+  slug: "artemis-ii",
+  description:
+    "Missione con equipaggio del programma Artemis, pensata per riportare esseri umani nelle vicinanze della Luna e validare i sistemi per le future missioni di esplorazione profonda.",
+  missionType: "CREWED",
   status: "SCHEDULED",
-  launchDate: "",
-  windowStart: "",
-  windowEnd: "",
-  destination: "",
-  orbit: "",
-  isCrewed: false,
-  imageUrl: "",
-  detailsUrl: "",
-  agencyId: "",
-  rocketId: "",
-  launchSiteId: "",
+  launchDate: "2026-05-21T14:30",
+  windowStart: "2026-05-21T14:00",
+  windowEnd: "2026-05-21T16:00",
+  destination: "Moon",
+  orbit: "Lunar Flyby",
+  isCrewed: true,
+  imageUrl:
+    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1400&q=80",
+  detailsUrl: "https://www.nasa.gov",
+  agencyId: "a1",
+  rocketId: "r1",
+  launchSiteId: "l1",
 };
 
-function toDatetimeLocal(value) {
-  if (!value) return "";
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60000);
-  return localDate.toISOString().slice(0, 16);
-}
+const agencies = [
+  { id: "a1", name: "NASA" },
+  { id: "a2", name: "ESA" },
+  { id: "a3", name: "SpaceX" },
+  { id: "a4", name: "JAXA" },
+];
+
+const rockets = [
+  { id: "r1", name: "SLS Block 1" },
+  { id: "r2", name: "Falcon 9" },
+  { id: "r3", name: "Ariane 6" },
+  { id: "r4", name: "H3" },
+];
+
+const launchSites = [
+  { id: "l1", name: "Kennedy Space Center LC-39B" },
+  { id: "l2", name: "Vandenberg SLC-4E" },
+  { id: "l3", name: "Guiana Space Centre ELA-4" },
+  { id: "l4", name: "Tanegashima Yoshinobu Launch Complex" },
+];
+
+export const metadata = {
+  title: "Modifica Missione",
+};
 
 export default function EditMissionPage() {
-  const params = useParams();
-  const router = useRouter();
-  const missionId = params.id;
-
-  const [form, setForm] = useState(initialForm);
-  const [loadingMission, setLoadingMission] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  useEffect(() => {
-    async function fetchMission() {
-      try {
-        setLoadingMission(true);
-        setError("");
-
-        const res = await fetch(
-          `${process.env.API_URL}/missions/${missionId}`,
-          { cache: "no-store" },
-        );
-
-        if (res.status === 404) {
-          setError("Missione non trovata");
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error("Errore nel recupero della missione");
-        }
-
-        const mission = await res.json();
-
-        setForm({
-          name: mission.name || "",
-          slug: mission.slug || "",
-          description: mission.description || "",
-          missionType: mission.missionType || "",
-          status: mission.status || "SCHEDULED",
-          launchDate: toDatetimeLocal(mission.launchDate),
-          windowStart: toDatetimeLocal(mission.windowStart),
-          windowEnd: toDatetimeLocal(mission.windowEnd),
-          destination: mission.destination || "",
-          orbit: mission.orbit || "",
-          isCrewed: Boolean(mission.isCrewed),
-          imageUrl: mission.imageUrl || "",
-          detailsUrl: mission.detailsUrl || "",
-          agencyId: mission.agencyId || "",
-          rocketId: mission.rocketId || "",
-          launchSiteId: mission.launchSiteId || "",
-        });
-      } catch (err) {
-        setError(err.message || "Errore durante il caricamento");
-      } finally {
-        setLoadingMission(false);
-      }
-    }
-
-    if (missionId) {
-      fetchMission();
-    }
-  }, [missionId]);
-
-  function handleChange(e) {
-    const { name, value, type, checked } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
-  }
-
-  function generateSlug(value) {
-    return value
-      .toLowerCase()
-      .trim()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-");
-  }
-
-  function handleGenerateSlug() {
-    setForm((prev) => ({
-      ...prev,
-      slug: generateSlug(prev.name),
-    }));
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const payload = {
-        ...form,
-        missionType: form.missionType || null,
-        description: form.description || null,
-        launchDate: form.launchDate || null,
-        windowStart: form.windowStart || null,
-        windowEnd: form.windowEnd || null,
-        destination: form.destination || null,
-        orbit: form.orbit || null,
-        imageUrl: form.imageUrl || null,
-        detailsUrl: form.detailsUrl || null,
-      };
-
-      const res = await fetch(`${process.env.API_URL}/missions/${missionId}`, {
-        method: "PUT", // oppure PATCH se la tua API usa patch
-        headers: {
-          "Content-Type": "application/json",
-          // Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || "Errore durante il salvataggio");
-      }
-
-      setSuccess("Missione aggiornata con successo");
-
-      setTimeout(() => {
-        router.push(`/admin/missions/${missionId}`);
-      }, 1000);
-    } catch (err) {
-      setError(err.message || "Errore durante il salvataggio");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  if (loadingMission) {
-    return (
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-8">
-        <p className="text-sm text-slate-300">Caricamento missione...</p>
-      </div>
-    );
-  }
-
-  if (error && !form.name) {
-    return (
-      <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8">
-        <h1 className="text-2xl font-bold text-white">Errore</h1>
-        <p className="mt-3 text-sm text-red-200">{error}</p>
-        <Link
-          href="/admin/missions"
-          className="mt-6 inline-block rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-        >
-          Torna alle missioni
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <main className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
-            Edit Mission
+    <main className="min-h-screen bg-slate-950 text-white">
+      <section className="mx-auto max-w-5xl px-6 py-10">
+        <div className="mb-8">
+          <Link
+            href={`/admin/missions/${mission.id}`}
+            className="inline-flex items-center text-sm text-cyan-400 transition hover:text-cyan-300"
+          >
+            ← Torna al dettaglio missione
+          </Link>
+
+          <p className="mt-4 text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
+            Admin Panel
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-white">
-            Modifica missione
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">
+            Modifica Missione
           </h1>
           <p className="mt-2 text-sm text-slate-400">
             Aggiorna i dati della missione selezionata.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={`/admin/missions/${missionId}`}
-            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
-          >
-            Torna al dettaglio
-          </Link>
-        </div>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-6 rounded-3xl border border-slate-800 bg-slate-900/50 p-6"
-      >
-        <div className="grid gap-4 md:grid-cols-2">
+        <form className="space-y-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl">
           <div>
-            <label className="mb-2 block text-sm font-medium">Nome *</label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
+            <h2 className="text-lg font-semibold text-white">
+              Informazioni principali
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Modifica i dati base della missione.
+            </p>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">Slug *</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                name="slug"
-                value={form.slug}
-                onChange={handleChange}
-                required
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-              />
-              <button
-                type="button"
-                onClick={handleGenerateSlug}
-                className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
-              >
-                Genera
-              </button>
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.name}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Slug
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.slug}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Tipo missione
+                </label>
+                <select
+                  defaultValue={mission.missionType}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                >
+                  <option value="CREWED">CREWED</option>
+                  <option value="SATELLITE">SATELLITE</option>
+                  <option value="CARGO">CARGO</option>
+                  <option value="TEST_FLIGHT">TEST_FLIGHT</option>
+                  <option value="COMMUNICATION">COMMUNICATION</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Stato
+                </label>
+                <select
+                  defaultValue={mission.status}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                >
+                  <option value="PLANNED">PLANNED</option>
+                  <option value="SCHEDULED">SCHEDULED</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Descrizione
+                </label>
+                <textarea
+                  rows={5}
+                  defaultValue={mission.description}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div>
-          <label className="mb-2 block text-sm font-medium">Descrizione</label>
-          <textarea
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-            rows={5}
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-          />
-        </div>
+          <div className="border-t border-slate-800 pt-8">
+            <h2 className="text-lg font-semibold text-white">Programmazione</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Gestisci data e finestra di lancio.
+            </p>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Tipo missione
-            </label>
-            <select
-              name="missionType"
-              value={form.missionType}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            >
-              <option value="">Seleziona tipo</option>
-              {missionTypeOptions.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+            <div className="mt-5 grid gap-5 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Data lancio
+                </label>
+                <input
+                  type="datetime-local"
+                  defaultValue={mission.launchDate}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Window Start
+                </label>
+                <input
+                  type="datetime-local"
+                  defaultValue={mission.windowStart}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Window End
+                </label>
+                <input
+                  type="datetime-local"
+                  defaultValue={mission.windowEnd}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">Status *</label>
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            >
-              {missionStatusOptions.map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
+          <div className="border-t border-slate-800 pt-8">
+            <h2 className="text-lg font-semibold text-white">Destinazione</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Specifica obiettivo e orbita della missione.
+            </p>
+
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Destinazione
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.destination}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Orbita
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.orbit}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-end">
-            <label className="flex w-full items-center gap-3 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3">
-              <input
-                type="checkbox"
-                name="isCrewed"
-                checked={form.isCrewed}
-                onChange={handleChange}
-                className="h-4 w-4"
-              />
-              <span className="text-sm font-medium">
-                Missione con equipaggio
-              </span>
-            </label>
-          </div>
-        </div>
+          <div className="border-t border-slate-800 pt-8">
+            <h2 className="text-lg font-semibold text-white">Relazioni</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Collega la missione alle entità del sistema.
+            </p>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Launch Date
-            </label>
-            <input
-              type="datetime-local"
-              name="launchDate"
-              value={form.launchDate}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
+            <div className="mt-5 grid gap-5 md:grid-cols-3">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Agenzia
+                </label>
+                <select
+                  defaultValue={mission.agencyId}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                >
+                  {agencies.map((agency) => (
+                    <option key={agency.id} value={agency.id}>
+                      {agency.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Window Start
-            </label>
-            <input
-              type="datetime-local"
-              name="windowStart"
-              value={form.windowStart}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Razzo
+                </label>
+                <select
+                  defaultValue={mission.rocketId}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                >
+                  {rockets.map((rocket) => (
+                    <option key={rocket.id} value={rocket.id}>
+                      {rocket.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">Window End</label>
-            <input
-              type="datetime-local"
-              name="windowEnd"
-              value={form.windowEnd}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Destinazione
-            </label>
-            <input
-              type="text"
-              name="destination"
-              value={form.destination}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Launch Site
+                </label>
+                <select
+                  defaultValue={mission.launchSiteId}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                >
+                  {launchSites.map((site) => (
+                    <option key={site.id} value={site.id}>
+                      {site.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">Orbita</label>
-            <input
-              type="text"
-              name="orbit"
-              value={form.orbit}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
-        </div>
+          <div className="border-t border-slate-800 pt-8">
+            <h2 className="text-lg font-semibold text-white">
+              Media e riferimenti
+            </h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Immagine, link ufficiale e opzioni aggiuntive.
+            </p>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-medium">Image URL</label>
-            <input
-              type="url"
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Image URL
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.imageUrl}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Details URL
-            </label>
-            <input
-              type="url"
-              name="detailsUrl"
-              value={form.detailsUrl}
-              onChange={handleChange}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
-        </div>
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-200">
+                  Details URL
+                </label>
+                <input
+                  type="text"
+                  defaultValue={mission.detailsUrl}
+                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
+                />
+              </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Agency ID *
-            </label>
-            <input
-              type="text"
-              name="agencyId"
-              value={form.agencyId}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
+              <div className="md:col-span-2">
+                <label className="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-200">
+                  <input
+                    type="checkbox"
+                    defaultChecked={mission.isCrewed}
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                  />
+                  Missione con equipaggio
+                </label>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Rocket ID *
-            </label>
-            <input
-              type="text"
-              name="rocketId"
-              value={form.rocketId}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
+          <div className="border-t border-slate-800 pt-6">
+            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+              <button
+                type="button"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-medium text-red-400 transition hover:bg-red-500/20"
+              >
+                Elimina Missione
+              </button>
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row">
+                <Link
+                  href={`/admin/missions/${mission.id}`}
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
+                >
+                  Annulla
+                </Link>
+
+                <button
+                  type="submit"
+                  className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                >
+                  Salva modifiche
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-medium">
-              Launch Site ID *
-            </label>
-            <input
-              type="text"
-              name="launchSiteId"
-              value={form.launchSiteId}
-              onChange={handleChange}
-              required
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none transition focus:border-cyan-400"
-            />
-          </div>
-        </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-            {success}
-          </div>
-        )}
-
-        <div className="flex flex-wrap gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? "Salvataggio..." : "Salva modifiche"}
-          </button>
-
-          <Link
-            href={`/admin/missions/${missionId}`}
-            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
-          >
-            Annulla
-          </Link>
-        </div>
-      </form>
+        </form>
+      </section>
     </main>
   );
 }

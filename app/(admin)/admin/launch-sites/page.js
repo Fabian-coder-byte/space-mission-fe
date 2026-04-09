@@ -1,76 +1,65 @@
-import { getRockets } from "@/lib/api/rockets";
 import Link from "next/link";
 
-const rockets = [
+const launchSites = [
   {
     id: "1",
-    name: "Falcon 9",
-    slug: "falcon-9",
-    manufacturer: "SpaceX",
+    name: "Kennedy Space Center LC-39A",
+    slug: "kennedy-space-center-lc-39a",
+    locationName: "Merritt Island",
     country: "USA",
+    region: "Florida",
+    padCode: "LC-39A",
     status: "ACTIVE",
-    reusable: true,
-    stages: 2,
-    height: 70,
-    payloadLeoKg: 22800,
-    missionsCount: 186,
+    launchesCount: 128,
     createdAt: "2026-04-01",
   },
   {
     id: "2",
-    name: "SLS Block 1",
-    slug: "sls-block-1",
-    manufacturer: "NASA",
+    name: "Vandenberg SLC-4E",
+    slug: "vandenberg-slc-4e",
+    locationName: "Vandenberg",
     country: "USA",
+    region: "California",
+    padCode: "SLC-4E",
     status: "ACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 98,
-    payloadLeoKg: 95000,
-    missionsCount: 4,
-    createdAt: "2026-03-25",
+    launchesCount: 74,
+    createdAt: "2026-03-20",
   },
   {
     id: "3",
-    name: "Ariane 6",
-    slug: "ariane-6",
-    manufacturer: "ESA",
-    country: "Europe",
-    status: "ACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 63,
-    payloadLeoKg: 21500,
-    missionsCount: 11,
-    createdAt: "2026-03-12",
+    name: "Guiana Space Centre ELA-3",
+    slug: "guiana-space-centre-ela-3",
+    locationName: "Kourou",
+    country: "French Guiana",
+    region: "South America",
+    padCode: "ELA-3",
+    status: "INACTIVE",
+    launchesCount: 58,
+    createdAt: "2026-02-11",
   },
   {
     id: "4",
-    name: "Starship",
-    slug: "starship",
-    manufacturer: "SpaceX",
-    country: "USA",
-    status: "TESTING",
-    reusable: true,
-    stages: 2,
-    height: 121,
-    payloadLeoKg: 100000,
-    missionsCount: 8,
-    createdAt: "2026-02-19",
+    name: "Baikonur Cosmodrome Site 1/5",
+    slug: "baikonur-site-1-5",
+    locationName: "Baikonur",
+    country: "Kazakhstan",
+    region: "Central Asia",
+    padCode: "Site 1/5",
+    status: "ACTIVE",
+    launchesCount: 212,
+    createdAt: "2026-01-28",
   },
   {
     id: "5",
-    name: "H3",
-    slug: "h3",
-    manufacturer: "JAXA",
-    country: "Japan",
-    status: "INACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 63,
-    payloadLeoKg: 16500,
-    missionsCount: 6,
-    createdAt: "2026-01-30",
+    name: "Satish Dhawan Space Centre FLP",
+    slug: "satish-dhawan-space-centre-flp",
+    locationName: "Sriharikota",
+    country: "India",
+    region: "Andhra Pradesh",
+    padCode: "FLP",
+    status: "MAINTENANCE",
+    launchesCount: 36,
+    createdAt: "2026-03-05",
   },
 ];
 
@@ -78,32 +67,20 @@ function getStatusClasses(status) {
   switch (status) {
     case "ACTIVE":
       return "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30";
-    case "TESTING":
-      return "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30";
     case "INACTIVE":
       return "bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30";
+    case "MAINTENANCE":
+      return "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30";
     default:
       return "bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30";
   }
 }
 
 export const metadata = {
-  title: "Admin Razzi",
+  title: "Admin Launch Sites",
 };
 
-export default async function AdminRocketsPage() {
-  const totalRockets = rockets.length;
-  const activeRockets = rockets.filter(
-    (rocket) => rocket.status === "ACTIVE",
-  ).length;
-  const reusableRockets = rockets.filter((rocket) => rocket.reusable).length;
-  const totalMissions = rockets.reduce(
-    (sum, rocket) => sum + rocket.missionsCount,
-    0,
-  );
-  const rocketApi = await getRockets();
-  console.log("Rockets", rocketApi);
-
+export default function AdminLaunchSitesPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="mx-auto max-w-7xl px-6 py-10">
@@ -113,10 +90,11 @@ export default async function AdminRocketsPage() {
               Admin Panel
             </p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight">
-              Gestione Razzi
+              Gestione Launch Sites
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              Visualizza, filtra e gestisci i razzi del progetto Space Mission.
+              Visualizza, cerca e gestisci i siti di lancio del progetto Space
+              Mission.
             </p>
           </div>
 
@@ -126,68 +104,66 @@ export default async function AdminRocketsPage() {
             </button>
 
             <Link
-              href="/admin/rockets/create"
+              href="/admin/launch-sites/new"
               className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
             >
-              + Nuovo Razzo
+              + Nuovo Launch Site
             </Link>
           </div>
         </div>
 
         <div className="mb-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Totale razzi</p>
-            <p className="mt-2 text-3xl font-bold">{totalRockets}</p>
+            <p className="text-sm text-slate-400">Totale siti</p>
+            <p className="mt-2 text-3xl font-bold">{launchSites.length}</p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
             <p className="text-sm text-slate-400">Attivi</p>
             <p className="mt-2 text-3xl font-bold text-emerald-400">
-              {activeRockets}
+              {launchSites.filter((site) => site.status === "ACTIVE").length}
             </p>
           </div>
 
           <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Riutilizzabili</p>
+            <p className="text-sm text-slate-400">In manutenzione</p>
+            <p className="mt-2 text-3xl font-bold text-amber-400">
+              {
+                launchSites.filter((site) => site.status === "MAINTENANCE")
+                  .length
+              }
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
+            <p className="text-sm text-slate-400">Lanci totali</p>
             <p className="mt-2 text-3xl font-bold text-cyan-400">
-              {reusableRockets}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Missioni collegate</p>
-            <p className="mt-2 text-3xl font-bold text-violet-400">
-              {totalMissions}
+              {launchSites.reduce((sum, site) => sum + site.launchesCount, 0)}
             </p>
           </div>
         </div>
 
         <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="grid gap-3 md:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
+          <div className="grid gap-3 md:grid-cols-[1.5fr_1fr_1fr_auto]">
             <input
               type="text"
-              placeholder="Cerca per nome, slug, produttore..."
+              placeholder="Cerca per nome, slug, paese..."
               className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
             />
 
             <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
-              <option>Tutti gli stati</option>
-              <option>ACTIVE</option>
-              <option>TESTING</option>
-              <option>INACTIVE</option>
-            </select>
-
-            <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
               <option>Tutti i paesi</option>
               <option>USA</option>
-              <option>Europe</option>
-              <option>Japan</option>
+              <option>India</option>
+              <option>Kazakhstan</option>
+              <option>French Guiana</option>
             </select>
 
             <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
-              <option>Tutti</option>
-              <option>Riutilizzabili</option>
-              <option>Non riutilizzabili</option>
+              <option>Tutti gli stati</option>
+              <option>ACTIVE</option>
+              <option>INACTIVE</option>
+              <option>MAINTENANCE</option>
             </select>
 
             <button className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700">
@@ -201,86 +177,74 @@ export default async function AdminRocketsPage() {
             <table className="min-w-full text-left text-sm">
               <thead className="bg-slate-900 text-slate-300">
                 <tr className="border-b border-slate-800">
-                  <th className="px-5 py-4 font-semibold">Razzo</th>
-                  <th className="px-5 py-4 font-semibold">Produttore</th>
-                  <th className="px-5 py-4 font-semibold">Stato</th>
-                  <th className="px-5 py-4 font-semibold">Stadi</th>
-                  <th className="px-5 py-4 font-semibold">Altezza</th>
-                  <th className="px-5 py-4 font-semibold">Payload LEO</th>
-                  <th className="px-5 py-4 font-semibold">Missioni</th>
+                  <th className="px-5 py-4 font-semibold">Nome</th>
+                  <th className="px-5 py-4 font-semibold">Slug</th>
+                  <th className="px-5 py-4 font-semibold">Località</th>
+                  <th className="px-5 py-4 font-semibold">Pad</th>
+                  <th className="px-5 py-4 font-semibold">Status</th>
+                  <th className="px-5 py-4 font-semibold">Launches</th>
+                  <th className="px-5 py-4 font-semibold">Creato il</th>
                   <th className="px-5 py-4 font-semibold text-right">Azioni</th>
                 </tr>
               </thead>
 
               <tbody>
-                {rocketApi.map((rocket) => (
+                {launchSites.map((site) => (
                   <tr
-                    key={rocket.id}
+                    key={site.id}
                     className="border-b border-slate-800/80 text-slate-200 transition hover:bg-slate-800/40"
                   >
                     <td className="px-5 py-4">
                       <div>
-                        <p className="font-semibold text-white">
-                          {rocket.name}
+                        <p className="font-semibold text-white">{site.name}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          ID: {site.id}
                         </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-slate-400">
-                            {rocket.slug}
-                          </span>
-                          <span className="text-xs text-slate-500">•</span>
-                          <span className="text-xs text-slate-400">
-                            {rocket.country}
-                          </span>
-                          {rocket.reusable && (
-                            <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-400 ring-1 ring-cyan-500/30">
-                              REUSABLE
-                            </span>
-                          )}
-                        </div>
                       </div>
                     </td>
 
-                    <td className="px-5 py-4 text-slate-300">
-                      {rocket.manufacturer}
+                    <td className="px-5 py-4 text-slate-300">{site.slug}</td>
+
+                    <td className="px-5 py-4">
+                      <div>
+                        <p>{site.locationName}</p>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {site.region}, {site.country}
+                        </p>
+                      </div>
                     </td>
+
+                    <td className="px-5 py-4 text-slate-300">{site.padCode}</td>
 
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                          rocket.status,
+                          site.status,
                         )}`}
                       >
-                        {rocket.status}
+                        {site.status}
                       </span>
                     </td>
 
-                    <td className="px-5 py-4 text-slate-300">
-                      {rocket.stages}
+                    <td className="px-5 py-4 font-medium text-cyan-400">
+                      {site.launchesCount}
                     </td>
 
                     <td className="px-5 py-4 text-slate-300">
-                      {rocket.height} m
-                    </td>
-
-                    {/* <td className="px-5 py-4 text-slate-300">
-                      {rocket.payloadLeoKg.toLocaleString("it-IT")} kg
-                    </td> */}
-
-                    <td className="px-5 py-4 font-medium text-violet-400">
-                      {rocket.missionsCount}
+                      {new Date(site.createdAt).toLocaleDateString("it-IT")}
                     </td>
 
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
                         <Link
-                          href={`/admin/rockets/${rocket.id}`}
+                          href={`/admin/launch-sites/${site.id}`}
                           className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-500 hover:text-cyan-400"
                         >
                           Dettaglio
                         </Link>
 
                         <Link
-                          href={`/admin/rockets/${rocket.id}/edit`}
+                          href={`/admin/launch-sites/${site.id}/edit`}
                           className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-amber-500 hover:text-amber-400"
                         >
                           Modifica
@@ -300,10 +264,14 @@ export default async function AdminRocketsPage() {
           <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
             <p>
               Mostrando <span className="font-semibold text-white">1</span>-
-              <span className="font-semibold text-white">{rockets.length}</span>{" "}
+              <span className="font-semibold text-white">
+                {launchSites.length}
+              </span>{" "}
               di{" "}
-              <span className="font-semibold text-white">{rockets.length}</span>{" "}
-              razzi
+              <span className="font-semibold text-white">
+                {launchSites.length}
+              </span>{" "}
+              launch sites
             </p>
 
             <div className="flex items-center gap-2">
