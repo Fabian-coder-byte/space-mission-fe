@@ -1,6 +1,46 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
+  const initialForm = {
+    email: "fakeemail@gmail.com",
+    password: "password",
+  };
+
+  const [form, setForm] = useState(initialForm);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    const payload = {
+      ...form,
+    };
+
+    try {
+      const res = await loginApi(payload);
+
+      console.log(res);
+      toast.success("Login effettuato con successo");
+      console.log("Payload login:", payload);
+
+      // esempio:
+      // router.push("/dashboard");
+    } catch (error) {
+      console.error("Errore login:", error);
+      toast.error("Email o password non valide");
+    }
+  }
   return (
     <div className="w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur sm:p-10">
       <div className="mb-8">
@@ -16,7 +56,7 @@ export default function RegisterPage() {
         </p>
       </div>
 
-      <form className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid gap-6">
           <div>
             <label
@@ -29,6 +69,8 @@ export default function RegisterPage() {
               id="username"
               type="text"
               placeholder="Scegli uno username"
+              value={form.username}
+              onChange={handleChange}
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />
           </div>
@@ -43,6 +85,8 @@ export default function RegisterPage() {
             <input
               id="email"
               type="email"
+              value={form.email}
+              onChange={handleChange}
               placeholder="Inserisci la tua email"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />
@@ -58,6 +102,8 @@ export default function RegisterPage() {
             <input
               id="password"
               type="password"
+              value={form.password}
+              onChange={handleChange}
               placeholder="Crea una password"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />
@@ -73,6 +119,8 @@ export default function RegisterPage() {
             <input
               id="confirmPassword"
               type="password"
+              value={form.confirmPassword}
+              onChange={handleChange}
               placeholder="Ripeti la password"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />

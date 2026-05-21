@@ -1,46 +1,5 @@
+import { getAgenciesPagination } from "@/lib/api/agency";
 import Link from "next/link";
-
-const agencies = [
-  {
-    id: "cmnpt63090000rg3ax3ett97c",
-    name: "SpaceX",
-    slug: "spacex",
-    country: "USA",
-    type: "PRIVATE",
-    description: "Azienda aerospaziale fondata da Elon Musk.",
-    website: "https://www.spacex.com",
-    logoUrl: "https://example.com/spacex-logo.png",
-    foundedYear: 2002,
-    createdAt: "2026-04-08T08:50:50.937Z",
-    updatedAt: "2026-04-08T08:50:50.937Z",
-  },
-  {
-    id: "cmnpt63090000rg3ax3ett97d",
-    name: "NASA",
-    slug: "nasa",
-    country: "USA",
-    type: "GOVERNMENT",
-    description: "Agenzia spaziale statunitense.",
-    website: "https://www.nasa.gov",
-    logoUrl: "https://example.com/nasa-logo.png",
-    foundedYear: 1958,
-    createdAt: "2026-04-08T08:55:50.937Z",
-    updatedAt: "2026-04-08T08:55:50.937Z",
-  },
-  {
-    id: "cmnpt63090000rg3ax3ett97e",
-    name: "ESA",
-    slug: "esa",
-    country: "Europa",
-    type: "INTERNATIONAL",
-    description: "Agenzia Spaziale Europea.",
-    website: "https://www.esa.int",
-    logoUrl: "https://example.com/esa-logo.png",
-    foundedYear: 1975,
-    createdAt: "2026-04-08T09:00:50.937Z",
-    updatedAt: "2026-04-08T09:00:50.937Z",
-  },
-];
 
 function getTypeClasses(type) {
   switch (type) {
@@ -55,17 +14,57 @@ function getTypeClasses(type) {
   }
 }
 
-export default function AgenciesAdminPage() {
+function buildAgencyUrl({ page = 1, limit = 10, search = "" }) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  return `/admin/agencies?${params.toString()}`;
+}
+
+export default async function AgenciesAdminPage({ searchParams }) {
+  const params = await searchParams;
+
+  const currentPage = Number(params?.page || 1);
+  const limit = Number(params?.limit || 10);
+  const search = String(params?.search || "");
+
+  const agenciesResponse = await getAgenciesPagination(
+    currentPage,
+    limit,
+    search,
+  );
+
+  const agencies = agenciesResponse?.items || [];
+
+  const meta = agenciesResponse?.meta || {
+    total: 0,
+    page: currentPage,
+    limit,
+    totalPages: 1,
+  };
+
   return (
-    <main className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
+    <>
+      <div className="mb-3 flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
             Admin Panel
           </p>
+
           <h1 className="mt-2 text-3xl font-bold text-white">Agenzie</h1>
+
           <p className="mt-2 text-sm text-slate-400">
             Elenco delle agenzie spaziali con i dati principali.
+          </p>
+
+          <p className="mt-2 text-xs text-slate-500">
+            Totale agenzie: {meta.total}
           </p>
         </div>
 
@@ -77,13 +76,73 @@ export default function AgenciesAdminPage() {
         </Link>
       </div>
 
+      <div className="mb-3 rounded-3xl border border-slate-800 bg-slate-900/50 p-4">
+        <form className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+          <input type="hidden" name="page" value="1" />
+
+          <div>
+            <label
+              htmlFor="search"
+              className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500"
+            >
+              Cerca agenzia
+            </label>
+
+            <input
+              id="search"
+              name="search"
+              type="text"
+              defaultValue={search}
+              placeholder="Cerca per nome..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-500"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="limit"
+              className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500"
+            >
+              Elementi
+            </label>
+
+            <select
+              id="limit"
+              name="limit"
+              defaultValue={limit}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-cyan-500 md:w-36"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+            >
+              Applica
+            </button>
+
+            <Link
+              href="/admin/agencies?page=1&limit=10"
+              className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
+            >
+              Reset
+            </Link>
+          </div>
+        </form>
+      </div>
+
       <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-950/70 text-xs uppercase tracking-[0.18em] text-slate-400">
               <tr>
                 <th className="px-6 py-4">Nome</th>
-                <th className="px-6 py-4">Slug</th>
                 <th className="px-6 py-4">Country</th>
                 <th className="px-6 py-4">Tipo</th>
                 <th className="px-6 py-4">Anno fondazione</th>
@@ -101,14 +160,11 @@ export default function AgenciesAdminPage() {
                   <td className="px-6 py-4 align-middle">
                     <div>
                       <p className="font-semibold text-white">{agency.name}</p>
+
                       <p className="mt-1 line-clamp-1 max-w-xs text-xs text-slate-500">
                         {agency.description || "—"}
                       </p>
                     </div>
-                  </td>
-
-                  <td className="px-6 py-4 align-middle">
-                    {agency.slug || "—"}
                   </td>
 
                   <td className="px-6 py-4 align-middle">
@@ -159,6 +215,9 @@ export default function AgenciesAdminPage() {
                       >
                         Modifica
                       </Link>
+                      <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800">
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -167,7 +226,7 @@ export default function AgenciesAdminPage() {
               {agencies.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={6}
                     className="px-6 py-10 text-center text-sm text-slate-400"
                   >
                     Nessuna agenzia disponibile.
@@ -177,7 +236,107 @@ export default function AgenciesAdminPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="flex flex-col gap-4 border-t border-slate-800 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-slate-400">
+            <p>
+              Pagina{" "}
+              <span className="font-semibold text-white">{meta.page}</span> di{" "}
+              <span className="font-semibold text-white">
+                {meta.totalPages || 1}
+              </span>
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Mostrati {agencies.length} elementi su {meta.total}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={buildAgencyUrl({
+                page: 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage <= 1
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Prima
+            </Link>
+
+            <Link
+              href={buildAgencyUrl({
+                page: currentPage - 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage <= 1
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Precedente
+            </Link>
+
+            {Array.from({ length: meta.totalPages || 1 }, (_, index) => {
+              const page = index + 1;
+
+              return (
+                <Link
+                  key={page}
+                  href={buildAgencyUrl({
+                    page,
+                    limit,
+                    search,
+                  })}
+                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                    page === currentPage
+                      ? "border-cyan-500 bg-cyan-500 text-slate-950"
+                      : "border-slate-700 text-slate-200 hover:bg-slate-800"
+                  }`}
+                >
+                  {page}
+                </Link>
+              );
+            })}
+
+            <Link
+              href={buildAgencyUrl({
+                page: currentPage + 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage >= meta.totalPages
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Successiva
+            </Link>
+
+            <Link
+              href={buildAgencyUrl({
+                page: meta.totalPages || 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage >= meta.totalPages
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Ultima
+            </Link>
+          </div>
+        </div>
       </div>
-    </main>
+    </>
   );
 }

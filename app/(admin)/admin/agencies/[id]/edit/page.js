@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { createAgencies } from "@/lib/api/agency";
+import { createAgencies, getOneAgency } from "@/lib/api/agency";
+import { useParams } from "next/navigation";
 
 const agencyTypeOptions = ["PRIVATE", "GOVERNMENT", "INTERNATIONAL"];
 
@@ -93,10 +94,14 @@ function FieldError({ message }) {
   return <p className="mt-2 text-sm text-red-400">{message}</p>;
 }
 
-export default function NewAgencyPage() {
+export default function EditAgencyPage() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState(initialErrors);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const params = useParams();
+
+  const id = params.id;
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -110,6 +115,12 @@ export default function NewAgencyPage() {
       ...prev,
       [name]: "",
     }));
+  }
+
+  async function getData() {
+    let id = null;
+    let data = await getOneAgency(id);
+    this.initialForm = data;
   }
 
   async function handleSubmit(e) {
