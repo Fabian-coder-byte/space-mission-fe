@@ -1,11 +1,18 @@
 import Link from "next/link";
+import { serverFetch } from "@/lib/api/server";
+import Countdown from "@/components/countdown";
 
-const stats = [
-  { label: "Missioni monitorate", value: "120+" },
-  { label: "Agenzie spaziali", value: "35+" },
-  { label: "Razzi catalogati", value: "60+" },
-  { label: "Launch sites", value: "40+" },
-];
+function formatLaunchDate(dateStr) {
+  if (!dateStr) return "Data non confermata";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(dateStr)) + " UTC";
+}
 
 const sections = [
   {
@@ -34,7 +41,21 @@ const sections = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [upcomingMissions, stats] = await Promise.all([
+    serverFetch("/missions/upcoming?limit=1"),
+    serverFetch("/stats"),
+  ]);
+
+  const nextMission = upcomingMissions?.[0] ?? null;
+
+  const statsDisplay = [
+    { label: "Missioni monitorate", value: stats?.missions ?? "—" },
+    { label: "Agenzie spaziali", value: stats?.agencies ?? "—" },
+    { label: "Razzi catalogati", value: stats?.rockets ?? "—" },
+    { label: "Launch sites", value: stats?.launchSites ?? "—" },
+  ];
+
   return (
     <main>
       <section className="relative overflow-hidden border-b border-slate-800">
@@ -46,7 +67,7 @@ export default function HomePage() {
 
             <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
               Esplora le prossime missioni spaziali, i razzi e le agenzie che
-              spingono l’umanità oltre l’orbita.
+              spingono l&apos;umanità oltre l&apos;orbita.
             </h1>
 
             <p className="mt-6 max-w-2xl text-base leading-8 text-slate-300 sm:text-lg">
@@ -78,40 +99,74 @@ export default function HomePage() {
                   Prossimo lancio
                 </span>
                 <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-300">
-                  Live soon
+                  {nextMission ? "In programma" : "Nessun lancio"}
                 </span>
               </div>
 
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm text-slate-400">Missione</p>
-                  <h2 className="text-2xl font-semibold text-white">
-                    Artemis Explorer I
-                  </h2>
-                </div>
+              {nextMission ? (
+                <>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm text-slate-400">Missione</p>
+                      <h2 className="text-2xl font-semibold text-white">
+                        {nextMission.name}
+                      </h2>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-slate-400">Agenzia</p>
-                  <p className="text-slate-200">NASA / ESA</p>
-                </div>
+                    {nextMission.agency && (
+                      <div>
+                        <p className="text-sm text-slate-400">Agenzia</p>
+                        <p className="text-slate-200">{nextMission.agency.name}</p>
+                      </div>
+                    )}
 
-                <div>
-                  <p className="text-sm text-slate-400">Razzo</p>
-                  <p className="text-slate-200">Space Launch System</p>
-                </div>
+                    {nextMission.rocket && (
+                      <div>
+                        <p className="text-sm text-slate-400">Razzo</p>
+                        <p className="text-slate-200">{nextMission.rocket.name}</p>
+                      </div>
+                    )}
 
-                <div>
-                  <p className="text-sm text-slate-400">Data lancio</p>
-                  <p className="text-slate-200">12 Maggio 2026 • 14:30 UTC</p>
-                </div>
+                    <div>
+                      <p className="text-sm text-slate-400">Data lancio</p>
+                      <p className="text-slate-200">
+                        {formatLaunchDate(nextMission.launchDate)}
+                      </p>
+                    </div>
 
-                <div>
-                  <p className="text-sm text-slate-400">Sito di lancio</p>
-                  <p className="text-slate-200">Kennedy Space Center</p>
-                </div>
-              </div>
+                    {nextMission.launchSite && (
+                      <div>
+                        <p className="text-sm text-slate-400">Sito di lancio</p>
+                        <p className="text-slate-200">{nextMission.launchSite.name}</p>
+                      </div>
+                    )}
+                  </div>
 
-              <div className="mt-6">
+                  {nextMission.launchDate && (
+                    <div className="mt-6">
+                      <p className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-500">
+                        Countdown al lancio
+                      </p>
+                      <Countdown launchDate={nextMission.launchDate} />
+                    </div>
+                  )}
+
+                  <div className="mt-6">
+                    <Link
+                      href={`/missions/${nextMission.id}`}
+                      className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                    >
+                      Dettagli missione
+                    </Link>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 text-center text-slate-400">
+                  Nessuna missione in programma
+                </div>
+              )}
+
+              <div className="mt-3">
                 <Link
                   href="/missions"
                   className="inline-flex w-full items-center justify-center rounded-xl border border-slate-700 px-4 py-3 text-sm font-medium text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
@@ -127,7 +182,7 @@ export default function HomePage() {
       <section className="border-b border-slate-800 bg-slate-900/40">
         <div className="mx-auto max-w-7xl px-6 py-14">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {stats.map((stat) => (
+            {statsDisplay.map((stat) => (
               <div
                 key={stat.label}
                 className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6"

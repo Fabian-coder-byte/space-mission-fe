@@ -4,6 +4,19 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMeApi } from "@/lib/api/auth";
 import { updateProfile } from "@/lib/api/profile";
+import { getFavorites, removeFavoriteByLaunchId } from "@/lib/api/favorites";
+
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  return new Intl.DateTimeFormat("it-IT", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(dateStr)) + " UTC";
+}
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
@@ -12,6 +25,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+
+  const [favorites, setFavorites] = useState([]);
+  const [favLoading, setFavLoading] = useState(true);
+  const [removingId, setRemovingId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -37,6 +54,25 @@ export default function ProfilePage() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    getFavorites()
+      .then(setFavorites)
+      .catch(() => setFavorites([]))
+      .finally(() => setFavLoading(false));
+  }, []);
+
+  async function handleRemoveFavorite(launchId) {
+    setRemovingId(launchId);
+    try {
+      await removeFavoriteByLaunchId(launchId);
+      setFavorites((prev) => prev.filter((f) => f.launchId !== launchId));
+    } catch {
+      // ignore
+    } finally {
+      setRemovingId(null);
+    }
+  }
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -268,6 +304,75 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Sezione preferiti */}
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
+              <h2 className="text-2xl font-semibold text-white">
+                Missioni preferite
+              </h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Le missioni che hai salvato per tenerle d&apos;occhio.
+              </p>
+
+              <div className="mt-6">
+                {favLoading ? (
+                  <p className="text-sm text-slate-400">Caricamento preferiti...</p>
+                ) : favorites.length === 0 ? (
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-6 text-center">
+                    <p className="text-sm text-slate-400">
+                      Non hai ancora salvato nessuna missione.
+                    </p>
+                    <Link
+                      href="/missions"
+                      className="mt-4 inline-flex items-center text-sm font-medium text-cyan-400 transition hover:text-cyan-300"
+                    >
+                      Esplora le missioni →
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {favorites.map((fav) => (
+                      <div
+                        key={fav.id}
+                        className="flex items-start justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-950/60 p-4"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-sm font-semibold text-white">
+                            {fav.launchName}
+                          </h3>
+                          {fav.agencyName && (
+                            <p className="mt-0.5 text-xs text-slate-400">
+                              {fav.agencyName}
+                            </p>
+                          )}
+                          {fav.net && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              {formatDate(fav.net)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Link
+                            href={`/missions/${fav.launchId}`}
+                            className="rounded-xl border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
+                          >
+                            Dettagli
+                          </Link>
+                          <button
+                            onClick={() => handleRemoveFavorite(fav.launchId)}
+                            disabled={removingId === fav.launchId}
+                            className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-500/50 hover:bg-red-500/20 disabled:opacity-50"
+                          >
+                            {removingId === fav.launchId ? "..." : "Rimuovi"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
