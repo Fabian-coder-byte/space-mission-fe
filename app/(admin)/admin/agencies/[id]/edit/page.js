@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { createAgencies, getOneAgency } from "@/lib/api/agency";
-import { useParams } from "next/navigation";
+import { getOneAgency, updateAgency } from "@/lib/api/agency";
+import { useParams, useRouter } from "next/navigation";
 
 const agencyTypeOptions = ["PRIVATE", "GOVERNMENT", "INTERNATIONAL"];
 
@@ -98,10 +98,41 @@ export default function EditAgencyPage() {
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState(initialErrors);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const params = useParams();
+  const router = useRouter();
 
   const id = params.id;
+
+  useEffect(() => {
+    async function loadAgency() {
+      try {
+        setIsLoading(true);
+
+        const data = await getOneAgency(id);
+
+        setForm({
+          name: data?.name || "",
+          country: data?.country || "",
+          type: data?.type || "",
+          description: data?.description || "",
+          website: data?.website || "",
+          logoUrl: data?.logoUrl || "",
+          foundedYear: data?.foundedYear ? String(data.foundedYear) : "",
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error("Errore durante il caricamento dell'agenzia");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (id) {
+      loadAgency();
+    }
+  }, [id]);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -115,12 +146,6 @@ export default function EditAgencyPage() {
       ...prev,
       [name]: "",
     }));
-  }
-
-  async function getData() {
-    let id = null;
-    let data = await getOneAgency(id);
-    this.initialForm = data;
   }
 
   async function handleSubmit(e) {
@@ -147,26 +172,55 @@ export default function EditAgencyPage() {
     try {
       setIsSubmitting(true);
 
-      console.log("Payload nuova agenzia:", payload);
+      await updateAgency(id, payload);
 
-      // Qui poi chiamerai la tua API:
-      // await createAgency(payload);
+      toast.success("Agenzia aggiornata con successo");
 
-      await createAgencies(payload);
-
-      toast.success("Agenzia salvata con successo");
-      setForm(initialForm);
+      router.push("/admin/agencies");
     } catch (error) {
       console.error(error);
-      toast.error("Errore durante il salvataggio dell'agenzia");
+      toast.error("Errore durante l'aggiornamento dell'agenzia");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   function handleReset() {
+    async function loadAgency() {
+      try {
+        setIsLoading(true);
+
+        const data = await getOneAgency(id);
+
+        setForm({
+          name: data?.name || "",
+          country: data?.country || "",
+          type: data?.type || "",
+          description: data?.description || "",
+          website: data?.website || "",
+          logoUrl: data?.logoUrl || "",
+          foundedYear: data?.foundedYear ? String(data.foundedYear) : "",
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error("Errore durante il caricamento dell'agenzia");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    if (id) {
+      loadAgency();
+    }
     setForm(initialForm);
     setErrors(initialErrors);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 text-slate-300">
+        Caricamento agenzia...
+      </div>
+    );
   }
 
   return (
@@ -177,10 +231,12 @@ export default function EditAgencyPage() {
             Admin Panel
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold text-white">Crea agenzia</h1>
+          <h1 className="mt-2 text-3xl font-bold text-white">
+            Modifica agenzia
+          </h1>
 
           <p className="mt-2 text-sm text-slate-400">
-            Inserisci i dati principali della nuova agenzia spaziale.
+            Modifica i dati principali dell'agenzia spaziale.
           </p>
         </div>
 
@@ -363,7 +419,7 @@ export default function EditAgencyPage() {
             disabled={isSubmitting}
             className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isSubmitting ? "Salvataggio..." : "Crea agenzia"}
+            {isSubmitting ? "Salvataggio..." : "Salva modifiche"}
           </button>
 
           <button

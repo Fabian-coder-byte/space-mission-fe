@@ -1,325 +1,368 @@
-import { getRockets } from "@/lib/api/rockets";
-import Link from "next/link";
+import DeleteRocketButtonList from "@/components/delete-rocket-button-list";
+import { getRocketsPaginated } from "@/lib/api/rockets";
 
-const rockets = [
-  {
-    id: "1",
-    name: "Falcon 9",
-    slug: "falcon-9",
-    manufacturer: "SpaceX",
-    country: "USA",
-    status: "ACTIVE",
-    reusable: true,
-    stages: 2,
-    height: 70,
-    payloadLeoKg: 22800,
-    missionsCount: 186,
-    createdAt: "2026-04-01",
-  },
-  {
-    id: "2",
-    name: "SLS Block 1",
-    slug: "sls-block-1",
-    manufacturer: "NASA",
-    country: "USA",
-    status: "ACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 98,
-    payloadLeoKg: 95000,
-    missionsCount: 4,
-    createdAt: "2026-03-25",
-  },
-  {
-    id: "3",
-    name: "Ariane 6",
-    slug: "ariane-6",
-    manufacturer: "ESA",
-    country: "Europe",
-    status: "ACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 63,
-    payloadLeoKg: 21500,
-    missionsCount: 11,
-    createdAt: "2026-03-12",
-  },
-  {
-    id: "4",
-    name: "Starship",
-    slug: "starship",
-    manufacturer: "SpaceX",
-    country: "USA",
-    status: "TESTING",
-    reusable: true,
-    stages: 2,
-    height: 121,
-    payloadLeoKg: 100000,
-    missionsCount: 8,
-    createdAt: "2026-02-19",
-  },
-  {
-    id: "5",
-    name: "H3",
-    slug: "h3",
-    manufacturer: "JAXA",
-    country: "Japan",
-    status: "INACTIVE",
-    reusable: false,
-    stages: 2,
-    height: 63,
-    payloadLeoKg: 16500,
-    missionsCount: 6,
-    createdAt: "2026-01-30",
-  },
-];
+import Link from "next/link";
 
 function getStatusClasses(status) {
   switch (status) {
     case "ACTIVE":
-      return "bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30";
+      return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20";
     case "TESTING":
-      return "bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30";
+      return "bg-amber-500/15 text-amber-300 border border-amber-500/20";
     case "INACTIVE":
-      return "bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30";
+      return "bg-slate-700/40 text-slate-300 border border-slate-600";
+    case "RETIRED":
+      return "bg-red-500/15 text-red-300 border border-red-500/20";
     default:
-      return "bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30";
+      return "bg-slate-700/40 text-slate-300 border border-slate-600";
   }
+}
+
+function buildRocketUrl({ page = 1, limit = 10, search = "" }) {
+  const params = new URLSearchParams();
+
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  if (search) {
+    params.set("search", search);
+  }
+
+  return `/admin/rockets?${params.toString()}`;
+}
+
+function formatNumber(value) {
+  if (value === null || value === undefined) return "—";
+
+  return Number(value).toLocaleString("it-IT");
 }
 
 export const metadata = {
   title: "Admin Razzi",
 };
 
-export default async function AdminRocketsPage() {
-  const totalRockets = rockets.length;
-  const activeRockets = rockets.filter(
-    (rocket) => rocket.status === "ACTIVE",
-  ).length;
-  const reusableRockets = rockets.filter((rocket) => rocket.reusable).length;
-  const totalMissions = rockets.reduce(
-    (sum, rocket) => sum + rocket.missionsCount,
-    0,
-  );
-  const rocketApi = await getRockets();
-  console.log("Rockets", rocketApi);
+export default async function RocketsAdminPage({ searchParams }) {
+  const params = await searchParams;
+
+  const currentPage = Number(params?.page || 1);
+  const limit = Number(params?.limit || 10);
+  const search = String(params?.search || "");
+
+  const rocketsResponse = await getRocketsPaginated(currentPage, limit, search);
+
+  const rockets = rocketsResponse?.items || [];
+
+  const meta = rocketsResponse?.meta || {
+    total: 0,
+    page: currentPage,
+    limit,
+    totalPages: 1,
+  };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto max-w-7xl px-6 py-10">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <>
+      <div className="mb-3 flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
+            Admin Panel
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold text-white">Razzi</h1>
+
+          <p className="mt-2 text-sm text-slate-400">
+            Elenco dei razzi spaziali con dati tecnici, stato operativo e
+            missioni collegate.
+          </p>
+
+          <p className="mt-2 text-xs text-slate-500">
+            Totale razzi: {meta.total}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/rockets/new"
+            className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+          >
+            + Nuovo razzo
+          </Link>
+        </div>
+      </div>
+
+      <div className="mb-3 rounded-3xl border border-slate-800 bg-slate-900/50 p-4">
+        <form className="grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-end">
+          <input type="hidden" name="page" value="1" />
+
           <div>
-            <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
-              Admin Panel
-            </p>
-            <h1 className="mt-2 text-3xl font-bold tracking-tight">
-              Gestione Razzi
-            </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-400">
-              Visualizza, filtra e gestisci i razzi del progetto Space Mission.
-            </p>
+            <label
+              htmlFor="search"
+              className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500"
+            >
+              Cerca razzo
+            </label>
+
+            <input
+              id="search"
+              name="search"
+              type="text"
+              defaultValue={search}
+              placeholder="Cerca per nome, slug, produttore..."
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-600 focus:border-cyan-500"
+            />
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800">
-              Esporta CSV
+          <div>
+            <label
+              htmlFor="limit"
+              className="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-slate-500"
+            >
+              Elementi
+            </label>
+
+            <select
+              id="limit"
+              name="limit"
+              defaultValue={limit}
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-200 outline-none transition focus:border-cyan-500 md:w-36"
+            >
+              <option value="5">5</option>
+              <option value="10">10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+            >
+              Applica
             </button>
 
             <Link
-              href="/admin/rockets/create"
-              className="rounded-xl bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+              href="/admin/rockets?page=1&limit=10"
+              className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
             >
-              + Nuovo Razzo
+              Reset
+            </Link>
+          </div>
+        </form>
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/50">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm text-slate-300">
+            <thead className="bg-slate-950/70 text-xs uppercase tracking-[0.18em] text-slate-400">
+              <tr>
+                <th className="px-6 py-4">Nome</th>
+                <th className="px-6 py-4">Produttore</th>
+                <th className="px-6 py-4">Country</th>
+                <th className="px-6 py-4">Stato</th>
+                <th className="px-6 py-4">Riutilizzabile</th>
+                <th className="px-6 py-4">Stadi</th>
+                <th className="px-6 py-4">Altezza</th>
+                <th className="px-6 py-4">Payload LEO</th>
+                <th className="px-6 py-4 text-right">Azioni</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {rockets.map((rocket) => (
+                <tr
+                  key={rocket.id}
+                  className="border-t border-slate-800 transition hover:bg-slate-800/30"
+                >
+                  <td className="px-6 py-4 align-middle">
+                    <div>
+                      <p className="font-semibold text-white">{rocket.name}</p>
+
+                      <p className="mt-1 line-clamp-1 max-w-xs text-xs text-slate-500">
+                        {rocket.slug || "—"}
+                      </p>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.manufacturer || "—"}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.country || "—"}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(
+                        rocket.status,
+                      )}`}
+                    >
+                      {rocket.status || "—"}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.reusable ? (
+                      <span className="inline-flex rounded-full border border-cyan-500/20 bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-300">
+                        Sì
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-full border border-slate-600 bg-slate-700/40 px-3 py-1 text-xs font-medium text-slate-300">
+                        No
+                      </span>
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.stages || "—"}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.height ? `${rocket.height} m` : "—"}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    {rocket.payloadLeoKg
+                      ? `${formatNumber(rocket.payloadLeoKg)} kg`
+                      : "—"}
+                  </td>
+
+                  <td className="px-6 py-4 align-middle">
+                    <div className="flex justify-end gap-2">
+                      <Link
+                        href={`/admin/rockets/${rocket.id}`}
+                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800"
+                      >
+                        Dettaglio
+                      </Link>
+
+                      <Link
+                        href={`/admin/rockets/${rocket.id}/edit`}
+                        className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800"
+                      >
+                        Modifica
+                      </Link>
+
+                      <DeleteRocketButtonList id={rocket.id} />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+
+              {rockets.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={9}
+                    className="px-6 py-10 text-center text-sm text-slate-400"
+                  >
+                    Nessun razzo disponibile.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-slate-800 px-6 py-4 md:flex-row md:items-center md:justify-between">
+          <div className="text-sm text-slate-400">
+            <p>
+              Pagina{" "}
+              <span className="font-semibold text-white">{meta.page}</span> di{" "}
+              <span className="font-semibold text-white">
+                {meta.totalPages || 1}
+              </span>
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Mostrati {rockets.length} elementi su {meta.total}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href={buildRocketUrl({
+                page: 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage <= 1
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Prima
+            </Link>
+
+            <Link
+              href={buildRocketUrl({
+                page: currentPage - 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage <= 1
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Precedente
+            </Link>
+
+            {Array.from({ length: meta.totalPages || 1 }, (_, index) => {
+              const page = index + 1;
+
+              return (
+                <Link
+                  key={page}
+                  href={buildRocketUrl({
+                    page,
+                    limit,
+                    search,
+                  })}
+                  className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                    page === currentPage
+                      ? "border-cyan-500 bg-cyan-500 text-slate-950"
+                      : "border-slate-700 text-slate-200 hover:bg-slate-800"
+                  }`}
+                >
+                  {page}
+                </Link>
+              );
+            })}
+
+            <Link
+              href={buildRocketUrl({
+                page: currentPage + 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage >= meta.totalPages
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Successiva
+            </Link>
+
+            <Link
+              href={buildRocketUrl({
+                page: meta.totalPages || 1,
+                limit,
+                search,
+              })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                currentPage >= meta.totalPages
+                  ? "pointer-events-none border-slate-800 text-slate-600"
+                  : "border-slate-700 text-slate-200 hover:bg-slate-800"
+              }`}
+            >
+              Ultima
             </Link>
           </div>
         </div>
-
-        <div className="mb-6 grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Totale razzi</p>
-            <p className="mt-2 text-3xl font-bold">{totalRockets}</p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Attivi</p>
-            <p className="mt-2 text-3xl font-bold text-emerald-400">
-              {activeRockets}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Riutilizzabili</p>
-            <p className="mt-2 text-3xl font-bold text-cyan-400">
-              {reusableRockets}
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5">
-            <p className="text-sm text-slate-400">Missioni collegate</p>
-            <p className="mt-2 text-3xl font-bold text-violet-400">
-              {totalMissions}
-            </p>
-          </div>
-        </div>
-
-        <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-          <div className="grid gap-3 md:grid-cols-[1.5fr_1fr_1fr_1fr_auto]">
-            <input
-              type="text"
-              placeholder="Cerca per nome, slug, produttore..."
-              className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-            />
-
-            <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
-              <option>Tutti gli stati</option>
-              <option>ACTIVE</option>
-              <option>TESTING</option>
-              <option>INACTIVE</option>
-            </select>
-
-            <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
-              <option>Tutti i paesi</option>
-              <option>USA</option>
-              <option>Europe</option>
-              <option>Japan</option>
-            </select>
-
-            <select className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-2.5 text-sm text-white outline-none focus:border-cyan-500">
-              <option>Tutti</option>
-              <option>Riutilizzabili</option>
-              <option>Non riutilizzabili</option>
-            </select>
-
-            <button className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-700">
-              Filtra
-            </button>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-900 text-slate-300">
-                <tr className="border-b border-slate-800">
-                  <th className="px-5 py-4 font-semibold">Razzo</th>
-                  <th className="px-5 py-4 font-semibold">Produttore</th>
-                  <th className="px-5 py-4 font-semibold">Stato</th>
-                  <th className="px-5 py-4 font-semibold">Stadi</th>
-                  <th className="px-5 py-4 font-semibold">Altezza</th>
-                  <th className="px-5 py-4 font-semibold">Payload LEO</th>
-                  <th className="px-5 py-4 font-semibold">Missioni</th>
-                  <th className="px-5 py-4 font-semibold text-right">Azioni</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {rocketApi.map((rocket) => (
-                  <tr
-                    key={rocket.id}
-                    className="border-b border-slate-800/80 text-slate-200 transition hover:bg-slate-800/40"
-                  >
-                    <td className="px-5 py-4">
-                      <div>
-                        <p className="font-semibold text-white">
-                          {rocket.name}
-                        </p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-slate-400">
-                            {rocket.slug}
-                          </span>
-                          <span className="text-xs text-slate-500">•</span>
-                          <span className="text-xs text-slate-400">
-                            {rocket.country}
-                          </span>
-                          {rocket.reusable && (
-                            <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-400 ring-1 ring-cyan-500/30">
-                              REUSABLE
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-300">
-                      {rocket.manufacturer}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                          rocket.status,
-                        )}`}
-                      >
-                        {rocket.status}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-300">
-                      {rocket.stages}
-                    </td>
-
-                    <td className="px-5 py-4 text-slate-300">
-                      {rocket.height} m
-                    </td>
-
-                    {/* <td className="px-5 py-4 text-slate-300">
-                      {rocket.payloadLeoKg.toLocaleString("it-IT")} kg
-                    </td> */}
-
-                    <td className="px-5 py-4 font-medium text-violet-400">
-                      {rocket.missionsCount}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/admin/rockets/${rocket.id}`}
-                          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-cyan-500 hover:text-cyan-400"
-                        >
-                          Dettaglio
-                        </Link>
-
-                        <Link
-                          href={`/admin/rockets/${rocket.id}/edit`}
-                          className="rounded-lg border border-slate-700 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-amber-500 hover:text-amber-400"
-                        >
-                          Modifica
-                        </Link>
-
-                        <button className="rounded-lg border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-400 transition hover:bg-red-500/10">
-                          Elimina
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t border-slate-800 px-5 py-4 text-sm text-slate-400 md:flex-row md:items-center md:justify-between">
-            <p>
-              Mostrando <span className="font-semibold text-white">1</span>-
-              <span className="font-semibold text-white">{rockets.length}</span>{" "}
-              di{" "}
-              <span className="font-semibold text-white">{rockets.length}</span>{" "}
-              razzi
-            </p>
-
-            <div className="flex items-center gap-2">
-              <button className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 transition hover:bg-slate-800">
-                Precedente
-              </button>
-              <button className="rounded-lg bg-cyan-500 px-3 py-1.5 font-medium text-slate-950">
-                1
-              </button>
-              <button className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 transition hover:bg-slate-800">
-                Successiva
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
+      </div>
+    </>
   );
 }

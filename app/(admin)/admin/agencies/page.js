@@ -1,3 +1,5 @@
+import DeleteButtonList from "@/components/delete-button-list";
+import ExportAgenciesCsvButton from "@/components/export-agencies-csv-button";
 import { getAgenciesPagination } from "@/lib/api/agency";
 import Link from "next/link";
 
@@ -68,12 +70,16 @@ export default async function AgenciesAdminPage({ searchParams }) {
           </p>
         </div>
 
-        <Link
-          href="/admin/agencies/new"
-          className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
-        >
-          + Nuova agenzia
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <ExportAgenciesCsvButton />
+
+          <Link
+            href="/admin/agencies/new"
+            className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+          >
+            + Nuova agenzia
+          </Link>
+        </div>
       </div>
 
       <div className="mb-3 rounded-3xl border border-slate-800 bg-slate-900/50 p-4">
@@ -215,9 +221,7 @@ export default async function AgenciesAdminPage({ searchParams }) {
                       >
                         Modifica
                       </Link>
-                      <button className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-medium text-slate-200 transition hover:bg-slate-800">
-                        Delete
-                      </button>
+                      <DeleteButtonList id={agency.id} />
                     </div>
                   </td>
                 </tr>
