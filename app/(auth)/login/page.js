@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const initialForm = {
-    email: "fakeemail@gmail.com",
-    password: "password",
+    email: "",
+    password: "",
   };
 
   const [form, setForm] = useState(initialForm);
@@ -37,12 +37,9 @@ export default function LoginPage() {
     };
 
     try {
-      const res = await loginApi(payload);
-
-      console.log("Login response:", res);
+      await loginApi(payload);
       toast.success("Login effettuato con successo");
-
-      router.push("/dashboard");
+      router.push("/admin");
     } catch (error) {
       console.error("Errore login:", error);
       toast.error(error.message || "Email o password non valide");

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { getOneAgency, updateAgency } from "@/lib/api/agency";
 import { useParams, useRouter } from "next/navigation";
+import DeleteButtonList from "@/components/delete-button-list";
 
 const agencyTypeOptions = ["PRIVATE", "GOVERNMENT", "INTERNATIONAL"];
 
@@ -240,12 +241,16 @@ export default function EditAgencyPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/agencies"
-          className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
-        >
-          Torna alla lista
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/agencies"
+            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+          >
+            Torna alla lista
+          </Link>
+
+          <DeleteButtonList id={id} redirectTo="/admin/agencies" size="md" />
+        </div>
       </div>
 
       <form

@@ -1,206 +1,247 @@
-import Link from "next/link";
+"use client";
 
-export const metadata = {
-  title: "Crea Launch Site",
+import { createLaunchSite } from "@/lib/api/launch-sites";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+
+const initialForm = {
+  name: "",
+  code: "",
+  locationName: "",
+  region: "",
+  country: "",
+  latitude: "",
+  longitude: "",
+  imageUrl: "",
+  description: "",
 };
 
-export default function CreateLaunchSitePage() {
-  return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-8">
-          <Link
-            href="/admin/launch-sites"
-            className="inline-flex items-center text-sm text-cyan-400 transition hover:text-cyan-300"
-          >
-            ← Torna alla lista launch sites
-          </Link>
+export default function NewLaunchSitePage() {
+  const router = useRouter();
+  const [form, setForm] = useState(initialForm);
+  const [isSaving, setIsSaving] = useState(false);
 
-          <p className="mt-4 text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error("Il nome è obbligatorio");
+      return;
+    }
+
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim() || null,
+      locationName: form.locationName.trim() || null,
+      region: form.region.trim() || null,
+      country: form.country.trim() || null,
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
+      imageUrl: form.imageUrl.trim() || null,
+      description: form.description.trim() || null,
+    };
+
+    try {
+      setIsSaving(true);
+      await createLaunchSite(payload);
+      toast.success("Launch site creato con successo");
+      router.push("/admin/launch-sites");
+      router.refresh();
+    } catch (error) {
+      console.error(error);
+      toast.error("Errore durante la creazione del launch site");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="mb-3 flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
             Admin Panel
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            Crea nuovo Launch Site
+          <h1 className="mt-2 text-3xl font-bold text-white">
+            Crea launch site
           </h1>
           <p className="mt-2 text-sm text-slate-400">
-            Inserisci i dati del nuovo sito di lancio da salvare nel progetto
-            Space Mission.
+            Inserisci i dati del nuovo sito di lancio.
           </p>
         </div>
 
-        <form className="space-y-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl">
+        <Link
+          href="/admin/launch-sites"
+          className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+        >
+          Torna alla lista
+        </Link>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-6 rounded-3xl border border-slate-800 bg-slate-900/50 p-6"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              Informazioni principali
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Dati base del launch site.
-            </p>
-
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. Kennedy Space Center LC-39A"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Slug
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. kennedy-space-center-lc-39a"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Pad Code
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. LC-39A"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Stato
-                </label>
-                <select className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500">
-                  <option value="">Seleziona stato</option>
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                  <option value="MAINTENANCE">MAINTENANCE</option>
-                </select>
-              </div>
-            </div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Nome *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Es. Kennedy Space Center LC-39A"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-8">
-            <h2 className="text-lg font-semibold text-white">Posizione</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Informazioni geografiche del sito di lancio.
-            </p>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Codice pad
+            </label>
+            <input
+              type="text"
+              name="code"
+              value={form.code}
+              onChange={handleChange}
+              placeholder="Es. LC-39A"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
+          </div>
+        </div>
 
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Località
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. Merritt Island"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Regione / Stato
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. Florida"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Paese
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. USA"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Coordinate
-                </label>
-                <input
-                  type="text"
-                  placeholder="Es. 28.6084, -80.6043"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-            </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Località
+            </label>
+            <input
+              type="text"
+              name="locationName"
+              value={form.locationName}
+              onChange={handleChange}
+              placeholder="Es. Merritt Island"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-8">
-            <h2 className="text-lg font-semibold text-white">
-              Dettagli aggiuntivi
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Campi opzionali per arricchire la scheda del sito.
-            </p>
-
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Immagine URL
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Sito ufficiale / Fonte
-                </label>
-                <input
-                  type="text"
-                  placeholder="https://..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Descrizione
-                </label>
-                <textarea
-                  rows={5}
-                  placeholder="Descrizione del launch site..."
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-500"
-                />
-              </div>
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Regione
+            </label>
+            <input
+              type="text"
+              name="region"
+              value={form.region}
+              onChange={handleChange}
+              placeholder="Es. Florida"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-6">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-              <Link
-                href="/admin/launch-sites"
-                className="inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
-              >
-                Annulla
-              </Link>
-
-              <button
-                type="submit"
-                className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
-              >
-                Salva Launch Site
-              </button>
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Paese
+            </label>
+            <input
+              type="text"
+              name="country"
+              value={form.country}
+              onChange={handleChange}
+              placeholder="Es. USA"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
           </div>
-        </form>
-      </section>
-    </main>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Latitudine
+            </label>
+            <input
+              type="number"
+              name="latitude"
+              value={form.latitude}
+              onChange={handleChange}
+              step="any"
+              placeholder="Es. 28.6084"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Longitudine
+            </label>
+            <input
+              type="number"
+              name="longitude"
+              value={form.longitude}
+              onChange={handleChange}
+              step="any"
+              placeholder="Es. -80.6043"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-white">
+            Image URL
+          </label>
+          <input
+            type="url"
+            name="imageUrl"
+            value={form.imageUrl}
+            onChange={handleChange}
+            placeholder="https://..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-white">
+            Descrizione
+          </label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={5}
+            placeholder="Descrizione del launch site..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isSaving ? "Creazione..." : "Crea launch site"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setForm(initialForm)}
+            disabled={isSaving}
+            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Reset
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

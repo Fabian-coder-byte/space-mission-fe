@@ -1,51 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const stats = [
-  {
-    label: "Missioni",
-    value: 24,
-    description: "Totale missioni registrate",
-  },
-  {
-    label: "Razzi",
-    value: 8,
-    description: "Veicoli disponibili nel sistema",
-  },
-  {
-    label: "Agenzie",
-    value: 12,
-    description: "Organizzazioni spaziali censite",
-  },
-  {
-    label: "Launch Sites",
-    value: 6,
-    description: "Siti di lancio disponibili",
-  },
-];
-
-const latestMissions = [
-  {
-    id: "1",
-    name: "Artemis II",
-    status: "SCHEDULED",
-    launchDate: "2026-05-10T14:30:00.000Z",
-    destination: "Moon",
-  },
-  {
-    id: "2",
-    name: "Starlink Batch 12",
-    status: "PLANNED",
-    launchDate: "2026-05-18T09:00:00.000Z",
-    destination: "Low Earth Orbit",
-  },
-  {
-    id: "3",
-    name: "Mars Observer Next",
-    status: "DELAYED",
-    launchDate: "2026-06-03T18:45:00.000Z",
-    destination: "Mars",
-  },
-];
+import { getStats } from "@/lib/api/stats";
+import { apiFetch } from "@/lib/api/client";
 
 const quickActions = [
   {
@@ -72,7 +30,6 @@ const quickActions = [
 
 function formatDate(date) {
   if (!date) return "—";
-
   return new Intl.DateTimeFormat("it-IT", {
     dateStyle: "medium",
     timeStyle: "short",
@@ -83,13 +40,14 @@ function getStatusClasses(status) {
   switch (status) {
     case "SCHEDULED":
       return "bg-cyan-500/15 text-cyan-300 border border-cyan-500/20";
-    case "PLANNED":
+    case "CONFIRMED":
       return "bg-violet-500/15 text-violet-300 border border-violet-500/20";
     case "DELAYED":
       return "bg-amber-500/15 text-amber-300 border border-amber-500/20";
     case "COMPLETED":
       return "bg-emerald-500/15 text-emerald-300 border border-emerald-500/20";
-    case "CANCELED":
+    case "CANCELLED":
+    case "SCRUBBED":
       return "bg-red-500/15 text-red-300 border border-red-500/20";
     default:
       return "bg-slate-700/50 text-slate-300 border border-slate-600";
@@ -97,6 +55,49 @@ function getStatusClasses(status) {
 }
 
 export default function AdminDashboardPage() {
+  const [stats, setStats] = useState(null);
+  const [latestMissions, setLatestMissions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [statsData, missionsData] = await Promise.all([
+          getStats().catch(() => null),
+          apiFetch("/missions?page=1&limit=5").catch(() => null),
+        ]);
+        setStats(statsData);
+        setLatestMissions(missionsData?.data || []);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const statCards = [
+    {
+      label: "Missioni",
+      value: stats?.missions ?? "—",
+      description: "Totale missioni registrate",
+    },
+    {
+      label: "Razzi",
+      value: stats?.rockets ?? "—",
+      description: "Veicoli disponibili nel sistema",
+    },
+    {
+      label: "Agenzie",
+      value: stats?.agencies ?? "—",
+      description: "Organizzazioni spaziali censite",
+    },
+    {
+      label: "Launch Sites",
+      value: stats?.launchSites ?? "—",
+      description: "Siti di lancio disponibili",
+    },
+  ];
+
   return (
     <main className="space-y-6">
       <section className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
@@ -113,13 +114,15 @@ export default function AdminDashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <div
             key={stat.label}
             className="rounded-3xl border border-slate-800 bg-slate-900/50 p-5"
           >
             <p className="text-sm text-slate-400">{stat.label}</p>
-            <p className="mt-3 text-3xl font-bold text-white">{stat.value}</p>
+            <p className="mt-3 text-3xl font-bold text-white">
+              {loading ? "..." : stat.value}
+            </p>
             <p className="mt-2 text-sm text-slate-500">{stat.description}</p>
           </div>
         ))}
@@ -157,41 +160,44 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {latestMissions.map((mission) => (
-                    <tr
-                      key={mission.id}
-                      className="border-t border-slate-800 hover:bg-slate-800/30"
-                    >
-                      <td className="px-4 py-4 font-medium text-white">
-                        {mission.name}
-                      </td>
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(
-                            mission.status,
-                          )}`}
-                        >
-                          {mission.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        {mission.destination || "—"}
-                      </td>
-                      <td className="px-4 py-4">
-                        {formatDate(mission.launchDate)}
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                        Caricamento...
                       </td>
                     </tr>
-                  ))}
-
-                  {latestMissions.length === 0 && (
+                  ) : latestMissions.length === 0 ? (
                     <tr>
-                      <td
-                        colSpan={4}
-                        className="px-4 py-8 text-center text-slate-400"
-                      >
+                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
                         Nessuna missione disponibile.
                       </td>
                     </tr>
+                  ) : (
+                    latestMissions.map((mission) => (
+                      <tr
+                        key={mission.id}
+                        className="border-t border-slate-800 hover:bg-slate-800/30"
+                      >
+                        <td className="px-4 py-4 font-medium text-white">
+                          {mission.name}
+                        </td>
+                        <td className="px-4 py-4">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(
+                              mission.status,
+                            )}`}
+                          >
+                            {mission.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {mission.destination || "—"}
+                        </td>
+                        <td className="px-4 py-4">
+                          {formatDate(mission.launchDate)}
+                        </td>
+                      </tr>
+                    ))
                   )}
                 </tbody>
               </table>

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSiteSettings, updateSiteSettings } from "@/lib/api/site-settings";
 
-const initialForm = {
-  siteName: "Space Mission",
-  siteDescription:
-    "Scopri le prossime missioni spaziali, i razzi, le agenzie e i siti di lancio.",
+const emptyForm = {
+  siteName: "",
+  siteDescription: "",
   logoUrl: "",
-  contactEmail: "info@spacemission.com",
-  supportEmail: "support@spacemission.com",
+  contactEmail: "",
+  supportEmail: "",
   facebookUrl: "",
   instagramUrl: "",
   xUrl: "",
@@ -18,7 +18,7 @@ const initialForm = {
   showRocketsOnHome: true,
   maintenanceMode: false,
   allowRegistrations: true,
-  footerText: "Esplora il calendario dei prossimi lanci spaziali.",
+  footerText: "",
 };
 
 function SectionCard({ title, description, children }) {
@@ -36,20 +36,51 @@ function SectionCard({ title, description, children }) {
 }
 
 export default function AdminSettingsPage() {
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(emptyForm);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getSiteSettings();
+        setForm({
+          siteName: data.siteName ?? "",
+          siteDescription: data.siteDescription ?? "",
+          logoUrl: data.logoUrl ?? "",
+          contactEmail: data.contactEmail ?? "",
+          supportEmail: data.supportEmail ?? "",
+          facebookUrl: data.facebookUrl ?? "",
+          instagramUrl: data.instagramUrl ?? "",
+          xUrl: data.xUrl ?? "",
+          youtubeUrl: data.youtubeUrl ?? "",
+          showUpcomingMissionsOnHome: data.showUpcomingMissionsOnHome ?? true,
+          showAgenciesOnHome: data.showAgenciesOnHome ?? true,
+          showRocketsOnHome: data.showRocketsOnHome ?? true,
+          maintenanceMode: data.maintenanceMode ?? false,
+          allowRegistrations: data.allowRegistrations ?? true,
+          footerText: data.footerText ?? "",
+        });
+      } catch {
+        setError("Impossibile caricare le impostazioni.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
-
     setForm((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -59,27 +90,33 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    const payload = {
-      ...form,
-      logoUrl: form.logoUrl || null,
-      supportEmail: form.supportEmail || null,
-      facebookUrl: form.facebookUrl || null,
-      instagramUrl: form.instagramUrl || null,
-      xUrl: form.xUrl || null,
-      youtubeUrl: form.youtubeUrl || null,
-      footerText: form.footerText || null,
-    };
-
-    console.log("Payload impostazioni sito:", payload);
-    setSuccess(
-      "Impostazioni salvate correttamente. Per ora il salvataggio è simulato.",
-    );
+    setSaving(true);
+    try {
+      const payload = {
+        ...form,
+        logoUrl: form.logoUrl || undefined,
+        supportEmail: form.supportEmail || undefined,
+        facebookUrl: form.facebookUrl || undefined,
+        instagramUrl: form.instagramUrl || undefined,
+        xUrl: form.xUrl || undefined,
+        youtubeUrl: form.youtubeUrl || undefined,
+        footerText: form.footerText || undefined,
+      };
+      await updateSiteSettings(payload);
+      setSuccess("Impostazioni salvate correttamente.");
+    } catch (err) {
+      setError(err.message || "Errore durante il salvataggio.");
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleReset() {
-    setForm(initialForm);
-    setError("");
-    setSuccess("");
+  if (loading) {
+    return (
+      <main className="flex min-h-[40vh] items-center justify-center text-slate-400">
+        Caricamento impostazioni...
+      </main>
+    );
   }
 
   return (
@@ -343,17 +380,10 @@ export default function AdminSettingsPage() {
         <div className="flex flex-wrap gap-3">
           <button
             type="submit"
-            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400"
+            disabled={saving}
+            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-60"
           >
-            Salva impostazioni
-          </button>
-
-          <button
-            type="button"
-            onClick={handleReset}
-            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
-          >
-            Reset
+            {saving ? "Salvataggio..." : "Salva impostazioni"}
           </button>
         </div>
       </form>

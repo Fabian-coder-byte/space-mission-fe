@@ -1,247 +1,288 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
+import { getOneLaunchSite, updateLaunchSite } from "@/lib/api/launch-sites";
+import { useParams, useRouter } from "next/navigation";
+import DeleteLaunchSiteButtonList from "@/components/delete-launch-site-button-list";
 
-const launchSite = {
-  id: "1",
-  name: "Kennedy Space Center LC-39A",
-  slug: "kennedy-space-center-lc-39a",
-  locationName: "Merritt Island",
-  region: "Florida",
-  country: "USA",
-  padCode: "LC-39A",
-  status: "ACTIVE",
-  latitude: 28.6084,
-  longitude: -80.6043,
-  imageUrl:
-    "https://images.unsplash.com/photo-1446776877081-d282a0f896e2?auto=format&fit=crop&w=1400&q=80",
-  sourceUrl: "https://www.nasa.gov",
-  description:
-    "Storico sito di lancio situato al Kennedy Space Center, utilizzato per numerose missioni spaziali con equipaggio e senza equipaggio.",
-};
-
-export const metadata = {
-  title: "Modifica Launch Site",
+const initialForm = {
+  name: "",
+  code: "",
+  locationName: "",
+  region: "",
+  country: "",
+  latitude: "",
+  longitude: "",
+  imageUrl: "",
+  description: "",
 };
 
 export default function EditLaunchSitePage() {
-  return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto max-w-4xl px-6 py-10">
-        <div className="mb-8">
-          <Link
-            href={`/admin/launch-sites/${launchSite.id}`}
-            className="inline-flex items-center text-sm text-cyan-400 transition hover:text-cyan-300"
-          >
-            ← Torna al dettaglio
-          </Link>
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id;
 
-          <p className="mt-4 text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
+  const [form, setForm] = useState(initialForm);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setIsLoading(true);
+        const site = await getOneLaunchSite(id);
+
+        setForm({
+          name: site.name || "",
+          code: site.code || "",
+          locationName: site.locationName || "",
+          region: site.region || "",
+          country: site.country || "",
+          latitude: site.latitude != null ? String(site.latitude) : "",
+          longitude: site.longitude != null ? String(site.longitude) : "",
+          imageUrl: site.imageUrl || "",
+          description: site.description || "",
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error("Errore durante il caricamento del launch site");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (id) load();
+  }, [id]);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!form.name.trim()) {
+      toast.error("Il nome è obbligatorio");
+      return;
+    }
+
+    const payload = {
+      name: form.name.trim(),
+      code: form.code.trim() || null,
+      locationName: form.locationName.trim() || null,
+      region: form.region.trim() || null,
+      country: form.country.trim() || null,
+      latitude: form.latitude ? Number(form.latitude) : null,
+      longitude: form.longitude ? Number(form.longitude) : null,
+      imageUrl: form.imageUrl.trim() || null,
+      description: form.description.trim() || null,
+    };
+
+    try {
+      setIsSubmitting(true);
+      await updateLaunchSite(id, payload);
+      toast.success("Launch site aggiornato con successo");
+      router.push(`/admin/launch-sites/${id}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Errore durante l'aggiornamento del launch site");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 text-slate-300">
+        Caricamento launch site...
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-3 flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
             Admin Panel
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">
-            Modifica Launch Site
+          <h1 className="mt-2 text-3xl font-bold text-white">
+            Modifica launch site
           </h1>
           <p className="mt-2 text-sm text-slate-400">
             Aggiorna i dati del sito di lancio selezionato.
           </p>
         </div>
 
-        <form className="space-y-8 rounded-2xl border border-slate-800 bg-slate-900/70 p-6 shadow-2xl">
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={`/admin/launch-sites/${id}`}
+            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+          >
+            Torna al dettaglio
+          </Link>
+
+          <DeleteLaunchSiteButtonList id={id} redirectTo="/admin/launch-sites" size="md" />
+        </div>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="grid gap-6 rounded-3xl border border-slate-800 bg-slate-900/50 p-6"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <h2 className="text-lg font-semibold text-white">
-              Informazioni principali
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Modifica i dati base del launch site.
-            </p>
-
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.name}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Slug
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.slug}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Pad Code
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.padCode}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Stato
-                </label>
-                <select
-                  defaultValue={launchSite.status}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                >
-                  <option value="ACTIVE">ACTIVE</option>
-                  <option value="INACTIVE">INACTIVE</option>
-                  <option value="MAINTENANCE">MAINTENANCE</option>
-                </select>
-              </div>
-            </div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Nome *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Es. Kennedy Space Center LC-39A"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-8">
-            <h2 className="text-lg font-semibold text-white">Posizione</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Aggiorna le informazioni geografiche del sito di lancio.
-            </p>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Codice pad
+            </label>
+            <input
+              type="text"
+              name="code"
+              value={form.code}
+              onChange={handleChange}
+              placeholder="Es. LC-39A"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
+          </div>
+        </div>
 
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Località
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.locationName}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Regione / Stato
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.region}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Paese
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.country}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Latitudine
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  defaultValue={launchSite.latitude}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Longitudine
-                </label>
-                <input
-                  type="number"
-                  step="any"
-                  defaultValue={launchSite.longitude}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Località
+            </label>
+            <input
+              type="text"
+              name="locationName"
+              value={form.locationName}
+              onChange={handleChange}
+              placeholder="Es. Merritt Island"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-8">
-            <h2 className="text-lg font-semibold text-white">
-              Dettagli aggiuntivi
-            </h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Modifica i campi opzionali del launch site.
-            </p>
-
-            <div className="mt-5 grid gap-5 md:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Immagine URL
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.imageUrl}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Sito ufficiale / Fonte
-                </label>
-                <input
-                  type="text"
-                  defaultValue={launchSite.sourceUrl}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-medium text-slate-200">
-                  Descrizione
-                </label>
-                <textarea
-                  rows={5}
-                  defaultValue={launchSite.description}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"
-                />
-              </div>
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Regione
+            </label>
+            <input
+              type="text"
+              name="region"
+              value={form.region}
+              onChange={handleChange}
+              placeholder="Es. Florida"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
           </div>
 
-          <div className="border-t border-slate-800 pt-6">
-            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
-              <button
-                type="button"
-                className="rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-3 text-sm font-medium text-red-400 transition hover:bg-red-500/20"
-              >
-                Elimina Launch Site
-              </button>
-
-              <div className="flex flex-col-reverse gap-3 sm:flex-row">
-                <Link
-                  href={`/admin/launch-sites/${launchSite.id}`}
-                  className="inline-flex items-center justify-center rounded-xl border border-slate-700 bg-slate-800 px-5 py-3 text-sm font-medium text-slate-200 transition hover:bg-slate-700"
-                >
-                  Annulla
-                </Link>
-
-                <button
-                  type="submit"
-                  className="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
-                >
-                  Salva modifiche
-                </button>
-              </div>
-            </div>
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Paese
+            </label>
+            <input
+              type="text"
+              name="country"
+              value={form.country}
+              onChange={handleChange}
+              placeholder="Es. USA"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
           </div>
-        </form>
-      </section>
-    </main>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Latitudine
+            </label>
+            <input
+              type="number"
+              name="latitude"
+              value={form.latitude}
+              onChange={handleChange}
+              step="any"
+              placeholder="Es. 28.6084"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Longitudine
+            </label>
+            <input
+              type="number"
+              name="longitude"
+              value={form.longitude}
+              onChange={handleChange}
+              step="any"
+              placeholder="Es. -80.6043"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-white">
+            Image URL
+          </label>
+          <input
+            type="url"
+            name="imageUrl"
+            value={form.imageUrl}
+            onChange={handleChange}
+            placeholder="https://..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-white">
+            Descrizione
+          </label>
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+            rows={5}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? "Salvataggio..." : "Salva modifiche"}
+          </button>
+
+          <Link
+            href={`/admin/launch-sites/${id}`}
+            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+          >
+            Annulla
+          </Link>
+        </div>
+      </form>
+    </>
   );
 }

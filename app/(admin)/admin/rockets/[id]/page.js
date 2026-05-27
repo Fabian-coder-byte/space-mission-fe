@@ -1,70 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-
-const rockets = [
-  {
-    id: "cmnpuf4pq0001te3am0gu9qv4",
-    name: "Falcon 9",
-    slug: "falcon-9",
-    manufacturer: "SpaceX",
-    description: "Razzo riutilizzabile a due stadi",
-    reusable: true,
-    status: "ACTIVE",
-    heightMeters: 70,
-    diameterMeters: 3.7,
-    massKg: 549054,
-    payloadToLeoKg: 22800,
-    payloadToGtoKg: 8300,
-    firstFlightDate: "2010-06-04T00:00:00.000Z",
-    imageUrl: "https://example.com/falcon9.jpg",
-    agencyId: "cmnpt63090000rg3ax3ett97c",
-    createdAt: "2026-04-08T09:25:52.670Z",
-    updatedAt: "2026-04-08T09:25:52.670Z",
-    agency: {
-      id: "cmnpt63090000rg3ax3ett97c",
-      name: "Space X1234dsfdddfdsfdgfdsdd",
-      slug: "space-xssdsdsddsdsdfdf232323",
-      country: null,
-      type: null,
-      description: null,
-      website: null,
-      logoUrl: null,
-      foundedYear: null,
-      createdAt: "2026-04-08T08:50:50.937Z",
-      updatedAt: "2026-04-08T08:50:50.937Z",
-    },
-    missions: [
-      {
-        id: "cmnpv5l780000wj3aeitas1va",
-        name: "Artemis II",
-        slug: "artemis-ii",
-        description: "Missione con equipaggio del programma Artemis",
-        missionType: "MILITARY",
-        status: "SCHEDULED",
-        launchDate: "2026-05-10T14:30:00.000Z",
-        windowStart: "2026-05-10T14:00:00.000Z",
-        windowEnd: "2026-05-10T16:00:00.000Z",
-        destination: "Moon",
-        orbit: "Lunar Flyby",
-        isCrewed: true,
-        imageUrl: "https://example.com/artemis2.jpg",
-        detailsUrl: "https://example.com/artemis2-details",
-        agencyId: "cmnpt63090000rg3ax3ett97c",
-        rocketId: "cmnpuf4pq0001te3am0gu9qv4",
-        launchSiteId: "cmnpuucdu0000yd3agpo6cdwx",
-        createdAt: "2026-04-08T09:46:27.092Z",
-        updatedAt: "2026-04-08T09:46:27.092Z",
-      },
-    ],
-  },
-];
+import { getOneRocket } from "@/lib/api/rockets";
+import DeleteRocketButtonList from "@/components/delete-rocket-button-list";
 
 function formatDate(date) {
   if (!date) return "—";
-
-  return new Intl.DateTimeFormat("it-IT", {
-    dateStyle: "medium",
-  }).format(new Date(date));
+  return new Intl.DateTimeFormat("it-IT", { dateStyle: "medium" }).format(
+    new Date(date),
+  );
 }
 
 function formatNumber(value, suffix = "") {
@@ -78,7 +21,7 @@ function DetailCard({ label, value }) {
       <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
         {label}
       </p>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
+      <p className="mt-2 text-sm font-medium text-white">{value || "—"}</p>
     </div>
   );
 }
@@ -99,18 +42,21 @@ function getStatusClasses(status) {
 export default async function RocketDetailPage({ params }) {
   const { id } = await params;
 
-  const rocket = rockets.find((item) => item.id === id);
-
-  if (!rocket) {
+  let rocket;
+  try {
+    rocket = await getOneRocket(id);
+  } catch {
     notFound();
   }
+
+  if (!rocket) notFound();
 
   return (
     <main className="space-y-6">
       <div className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-900/50 p-6 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
-            Rocket Detail
+            Admin Panel
           </p>
           <h1 className="mt-2 text-3xl font-bold text-white">{rocket.name}</h1>
           <p className="mt-2 text-sm text-slate-400">Slug: {rocket.slug}</p>
@@ -130,6 +76,8 @@ export default async function RocketDetailPage({ params }) {
           >
             Modifica razzo
           </Link>
+
+          <DeleteRocketButtonList id={rocket.id} redirectTo="/admin/rockets" size="md" />
         </div>
       </div>
 
@@ -138,11 +86,9 @@ export default async function RocketDetailPage({ params }) {
           <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
             <div className="flex flex-wrap items-center gap-3">
               <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(
-                  rocket.status,
-                )}`}
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClasses(rocket.status)}`}
               >
-                {rocket.status}
+                {rocket.status || "—"}
               </span>
 
               <span
@@ -161,19 +107,16 @@ export default async function RocketDetailPage({ params }) {
             </h2>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <DetailCard label="Nome" value={rocket.name || "—"} />
-              <DetailCard label="Slug" value={rocket.slug || "—"} />
-              <DetailCard
-                label="Manufacturer"
-                value={rocket.manufacturer || "—"}
-              />
+              <DetailCard label="Nome" value={rocket.name} />
+              <DetailCard label="Slug" value={rocket.slug} />
+              <DetailCard label="Manufacturer" value={rocket.manufacturer} />
               <DetailCard
                 label="Primo volo"
                 value={formatDate(rocket.firstFlightDate)}
               />
-              <DetailCard label="Status" value={rocket.status || "—"} />
+              <DetailCard label="Status" value={rocket.status} />
               <DetailCard
-                label="Reusable"
+                label="Riutilizzabile"
                 value={rocket.reusable ? "Sì" : "No"}
               />
             </div>
@@ -219,9 +162,9 @@ export default async function RocketDetailPage({ params }) {
                     <div className="mt-3 grid gap-3 md:grid-cols-3">
                       <DetailCard
                         label="Destinazione"
-                        value={mission.destination || "—"}
+                        value={mission.destination}
                       />
-                      <DetailCard label="Orbita" value={mission.orbit || "—"} />
+                      <DetailCard label="Orbita" value={mission.orbit} />
                       <DetailCard
                         label="Launch Date"
                         value={formatDate(mission.launchDate)}
@@ -268,22 +211,28 @@ export default async function RocketDetailPage({ params }) {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
-            <h2 className="text-xl font-semibold text-white">Agenzia</h2>
+          {rocket.agency && (
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
+              <h2 className="text-xl font-semibold text-white">Agenzia</h2>
 
-            <div className="mt-6 space-y-4">
-              <DetailCard label="Nome" value={rocket.agency?.name || "—"} />
-              <DetailCard label="Slug" value={rocket.agency?.slug || "—"} />
-              <DetailCard
-                label="Country"
-                value={rocket.agency?.country || "—"}
-              />
-              <DetailCard
-                label="Founded Year"
-                value={rocket.agency?.foundedYear || "—"}
-              />
+              <div className="mt-6 space-y-4">
+                <DetailCard label="Nome" value={rocket.agency.name} />
+                <DetailCard label="Slug" value={rocket.agency.slug} />
+                <DetailCard label="Country" value={rocket.agency.country} />
+                <DetailCard
+                  label="Anno fondazione"
+                  value={rocket.agency.foundedYear}
+                />
+
+                <Link
+                  href={`/admin/agencies/${rocket.agency.id}`}
+                  className="mt-2 inline-block rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+                >
+                  Vai all'agenzia
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6">
             <h2 className="text-xl font-semibold text-white">Metadati</h2>

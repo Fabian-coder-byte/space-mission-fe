@@ -104,16 +104,14 @@ export default function ProfileMenu({ user }) {
 
             <div className="my-2 border-t border-slate-800" />
 
-            <button
-              type="button"
-              className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
-              onClick={() => {
-                setIsOpen(false);
-                console.log("logout");
-              }}
-            >
-              Logout
-            </button>
+            <form action="/api/auth/logout" method="POST">
+              <button
+                type="submit"
+                className="flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-red-300 transition hover:bg-red-500/10 hover:text-red-200"
+              >
+                Logout
+              </button>
+            </form>
           </div>
         </div>
       )}

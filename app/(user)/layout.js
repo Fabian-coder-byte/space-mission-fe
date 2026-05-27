@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getMeApi } from "@/lib/api/auth";
 
-export default async function AccountLayout({ children }) {
+export default async function UserLayout({ children }) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get("sb_access_token")?.value;
 
@@ -16,9 +16,5 @@ export default async function AccountLayout({ children }) {
     redirect("/login");
   }
 
-  return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-4xl px-6 py-12">{children}</div>
-    </main>
-  );
+  return <>{children}</>;
 }

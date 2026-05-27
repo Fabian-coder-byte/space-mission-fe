@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { deleteAgency } from "@/lib/api/agency";
+import { deleteLaunchSite } from "@/lib/api/launch-sites";
 import ConfirmModal from "./confirm-modal";
 
-export default function DeleteButtonList({ id, redirectTo, size = "sm" }) {
+export default function DeleteLaunchSiteButtonList({ id, redirectTo, size = "sm" }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -14,13 +14,13 @@ export default function DeleteButtonList({ id, redirectTo, size = "sm" }) {
   async function handleConfirm() {
     setLoading(true);
     try {
-      await deleteAgency(id);
-      toast.success("Agenzia eliminata con successo");
+      await deleteLaunchSite(id);
+      toast.success("Launch site eliminato con successo");
       setOpen(false);
       if (redirectTo) router.push(redirectTo);
       else router.refresh();
     } catch (err) {
-      toast.error(err?.message || "Errore durante l'eliminazione dell'agenzia");
+      toast.error(err?.message || "Errore durante l'eliminazione del launch site");
     } finally {
       setLoading(false);
     }
@@ -42,8 +42,8 @@ export default function DeleteButtonList({ id, redirectTo, size = "sm" }) {
 
       <ConfirmModal
         isOpen={open}
-        title="Elimina agenzia"
-        message="Sei sicuro di voler eliminare questa agenzia? L'operazione non può essere annullata."
+        title="Elimina launch site"
+        message="Sei sicuro di voler eliminare questo launch site? L'operazione non può essere annullata."
         onConfirm={handleConfirm}
         onCancel={() => !loading && setOpen(false)}
         isLoading={loading}

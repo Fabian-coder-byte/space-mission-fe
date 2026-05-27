@@ -1,68 +1,83 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
-
-const favoriteMissions = [
-  {
-    id: 1,
-    name: "Artemis Explorer I",
-    slug: "artemis-explorer-i",
-    date: "12 Maggio 2026 • 14:30 UTC",
-    status: "Upcoming",
-  },
-  {
-    id: 2,
-    name: "Mars Probe Alpha",
-    slug: "mars-probe-alpha",
-    date: "02 Giugno 2026 • 19:40 UTC",
-    status: "Planned",
-  },
-];
-
-const recentActivity = [
-  {
-    id: 1,
-    text: "Hai aggiunto Artemis Explorer I ai preferiti",
-    date: "Oggi",
-  },
-  {
-    id: 2,
-    text: "Hai visualizzato il razzo Falcon 9",
-    date: "Ieri",
-  },
-  {
-    id: 3,
-    text: "Hai aggiornato il tuo profilo",
-    date: "3 giorni fa",
-  },
-];
+import { getMeApi } from "@/lib/api/auth";
+import { getFavorites } from "@/lib/api/favorites";
 
 function getStatusClasses(status) {
   switch (status) {
     case "Upcoming":
+    case "SCHEDULED":
+    case "CONFIRMED":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-300";
     case "Planned":
+    case "DELAYED":
       return "border-violet-500/30 bg-violet-500/10 text-violet-300";
-    case "Success":
+    case "COMPLETED":
       return "border-emerald-500/30 bg-emerald-500/10 text-emerald-300";
-    case "Failed":
-      return "border-red-500/30 bg-red-500/10 text-red-300";
     default:
       return "border-slate-700 bg-slate-800 text-slate-300";
   }
 }
 
-export const metadata = {
-  title: "Dashboard utente",
-  description:
-    "Area personale dell'utente per missioni preferite e attività recenti.",
-};
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  return new Intl.DateTimeFormat("it-IT", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(dateStr));
+}
 
 export default function UserDashboardPage() {
-  const user = {
-    name: "Pippo Rossi",
-    username: "PIPPO",
-    email: "pippo@email.com",
-    role: "USER",
-  };
+  const [user, setUser] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const token = localStorage.getItem("sb_access_token");
+        const [meData, favData] = await Promise.all([
+          getMeApi(token),
+          getFavorites().catch(() => []),
+        ]);
+
+        if (meData?.user) {
+          setUser({
+            id: meData.user.id,
+            email: meData.user.email,
+            name:
+              meData.user.userMetadata?.name ||
+              meData.user.userMetadata?.username ||
+              meData.user.email?.split("@")[0],
+            username:
+              meData.user.userMetadata?.username ||
+              meData.user.email?.split("@")[0] ||
+              "User",
+            role: meData.user.role,
+          });
+        }
+
+        setFavorites(Array.isArray(favData) ? favData : []);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+        Caricamento...
+      </main>
+    );
+  }
+
+  const displayName = user?.name || user?.username || "Utente";
+  const initials = (user?.username || "U").slice(0, 2).toUpperCase();
+  const recentFavorites = favorites.slice(0, 3);
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -73,12 +88,12 @@ export default function UserDashboardPage() {
           </p>
 
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
-            Benvenuto, {user.name}
+            Benvenuto, {displayName}
           </h1>
 
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
-            Qui puoi gestire il tuo profilo, tenere d’occhio le missioni salvate
-            e controllare la tua attività recente.
+            Qui puoi gestire il tuo profilo, tenere d&apos;occhio le missioni
+            salvate e controllare la tua attività recente.
           </p>
         </div>
       </section>
@@ -89,14 +104,16 @@ export default function UserDashboardPage() {
             <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500 text-xl font-bold text-slate-950">
-                  {user.username.slice(0, 2)}
+                  {initials}
                 </div>
 
                 <div>
                   <h2 className="text-xl font-semibold text-white">
-                    {user.name}
+                    {displayName}
                   </h2>
-                  <p className="text-sm text-slate-400">@{user.username}</p>
+                  <p className="text-sm text-slate-400">
+                    @{user?.username || "—"}
+                  </p>
                 </div>
               </div>
 
@@ -105,14 +122,18 @@ export default function UserDashboardPage() {
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     Email
                   </p>
-                  <p className="mt-2 text-sm text-slate-200">{user.email}</p>
+                  <p className="mt-2 text-sm text-slate-200">
+                    {user?.email || "—"}
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     Ruolo
                   </p>
-                  <p className="mt-2 text-sm text-slate-200">{user.role}</p>
+                  <p className="mt-2 text-sm text-slate-200">
+                    {user?.role || "—"}
+                  </p>
                 </div>
               </div>
 
@@ -167,17 +188,21 @@ export default function UserDashboardPage() {
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
                 <p className="text-sm text-slate-400">Missioni preferite</p>
-                <p className="mt-2 text-3xl font-bold text-white">8</p>
+                <p className="mt-2 text-3xl font-bold text-white">
+                  {favorites.length}
+                </p>
               </div>
 
               <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-                <p className="text-sm text-slate-400">Missioni seguite</p>
-                <p className="mt-2 text-3xl font-bold text-white">3</p>
+                <p className="text-sm text-slate-400">Ruolo account</p>
+                <p className="mt-2 text-sm font-bold text-white">
+                  {user?.role || "—"}
+                </p>
               </div>
 
               <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-                <p className="text-sm text-slate-400">Attività recenti</p>
-                <p className="mt-2 text-3xl font-bold text-white">12</p>
+                <p className="text-sm text-slate-400">Email verificata</p>
+                <p className="mt-2 text-sm font-bold text-cyan-400">Sì</p>
               </div>
             </div>
 
@@ -201,63 +226,49 @@ export default function UserDashboardPage() {
               </div>
 
               <div className="mt-6 grid gap-4">
-                {favoriteMissions.map((mission) => (
-                  <article
-                    key={mission.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5"
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span
-                            className={`rounded-full border px-3 py-1 text-xs font-medium ${getStatusClasses(
-                              mission.status,
-                            )}`}
-                          >
-                            {mission.status}
-                          </span>
-                          <span className="text-sm text-slate-400">
-                            {mission.date}
-                          </span>
+                {recentFavorites.length === 0 ? (
+                  <p className="text-sm text-slate-400">
+                    Nessuna missione nei preferiti.{" "}
+                    <Link href="/missions" className="text-cyan-400 hover:text-cyan-300">
+                      Esplora le missioni
+                    </Link>
+                  </p>
+                ) : (
+                  recentFavorites.map((fav) => (
+                    <article
+                      key={fav.id}
+                      className="rounded-2xl border border-slate-800 bg-slate-950/60 p-5"
+                    >
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            {fav.net && (
+                              <span className="text-sm text-slate-400">
+                                {formatDate(fav.net)}
+                              </span>
+                            )}
+                            {fav.agencyName && (
+                              <span className="text-xs text-slate-500">
+                                {fav.agencyName}
+                              </span>
+                            )}
+                          </div>
+
+                          <h3 className="mt-3 text-xl font-semibold text-white">
+                            {fav.launchName}
+                          </h3>
                         </div>
 
-                        <h3 className="mt-3 text-xl font-semibold text-white">
-                          {mission.name}
-                        </h3>
+                        <Link
+                          href={`/launches/${fav.launchId}`}
+                          className="inline-flex items-center justify-center rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
+                        >
+                          Dettagli
+                        </Link>
                       </div>
-
-                      <Link
-                        href={`/missions/${mission.slug}`}
-                        className="inline-flex items-center justify-center rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
-                      >
-                        Dettagli
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-              <h2 className="text-2xl font-semibold text-white">
-                Attività recente
-              </h2>
-              <p className="mt-2 text-sm text-slate-400">
-                Gli ultimi movimenti nel tuo account.
-              </p>
-
-              <div className="mt-6 space-y-4">
-                {recentActivity.map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4"
-                  >
-                    <p className="text-sm text-slate-200">{activity.text}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">
-                      {activity.date}
-                    </p>
-                  </div>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
             </div>
           </div>

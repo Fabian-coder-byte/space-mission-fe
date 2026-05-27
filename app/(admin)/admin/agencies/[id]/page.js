@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getOneAgency } from "@/lib/api/agency";
+import DeleteButtonList from "@/components/delete-button-list";
 
 function DetailItem({ label, value }) {
   return (
@@ -77,6 +78,8 @@ export default async function AgencyDetailPage({ params }) {
           >
             Modifica
           </Link>
+
+          <DeleteButtonList id={id} redirectTo="/admin/agencies" size="md" />
         </div>
       </div>
 

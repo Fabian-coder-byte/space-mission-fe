@@ -1,4 +1,6 @@
+import { getMeApi } from "@/lib/api/auth";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 const navItems = [
@@ -12,15 +14,31 @@ const navItems = [
 ];
 
 export default async function AdminLayout({ children }) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("sb_access_token")?.value;
+
+  if (!accessToken) {
+    redirect("/login");
+  }
+
+  const data = await getMeApi(accessToken);
+
+  if (!data?.user) {
+    redirect("/login");
+  }
+
+  if (data.user.role !== "ADMIN") {
+    redirect("/");
+  }
+
   const user = {
-    username: "PIPPO",
-    role: "ADMIN",
-    fullName: "Pippo Rossi",
-    email: "pippo@example.com",
+    id: data.user.id,
+    email: data.user.email,
+    username: data.user.userMetadata?.username || data.user.email?.split("@")[0] || "User",
+    role: data.user.role,
   };
 
-  if (!user) redirect("/login");
-  if (user.role !== "ADMIN") redirect("/dashboard");
+  const initials = user.username.slice(0, 2).toUpperCase();
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -53,15 +71,15 @@ export default async function AdminLayout({ children }) {
               <details className="group relative">
                 <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 px-3 py-2 transition hover:border-slate-700 hover:bg-slate-800">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-500/15 text-sm font-bold text-cyan-400 ring-1 ring-cyan-500/30">
-                    {user.username.slice(0, 2)}
+                    {initials}
                   </div>
 
                   <div className="hidden text-left md:block">
                     <p className="text-sm font-semibold text-white">
-                      {user.fullName}
+                      {user.username}
                     </p>
                     <p className="text-xs text-slate-400">
-                      {user.role} · {user.username}
+                      {user.role} · {user.email}
                     </p>
                   </div>
 
@@ -82,7 +100,7 @@ export default async function AdminLayout({ children }) {
                 <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/40">
                   <div className="border-b border-slate-800 px-4 py-4">
                     <p className="text-sm font-semibold text-white">
-                      {user.fullName}
+                      {user.username}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">{user.email}</p>
                     <div className="mt-3 inline-flex rounded-full bg-cyan-500/15 px-3 py-1 text-xs font-medium text-cyan-400 ring-1 ring-cyan-500/30">
@@ -105,12 +123,7 @@ export default async function AdminLayout({ children }) {
                       Cambia password
                     </Link>
 
-                    <Link
-                      href="/"
-                      className="mt-1 flex items-center rounded-xl px-3 py-2.5 text-sm text-red-400 transition hover:bg-red-500/10"
-                    >
-                      Logout
-                    </Link>
+                    <LogoutButton />
                   </div>
                 </div>
               </details>
@@ -135,5 +148,18 @@ export default async function AdminLayout({ children }) {
 
       <main className="mx-auto max-w-7xl p-4 md:p-6">{children}</main>
     </div>
+  );
+}
+
+function LogoutButton() {
+  return (
+    <form action="/api/auth/logout" method="POST">
+      <button
+        type="submit"
+        className="mt-1 flex w-full items-center rounded-xl px-3 py-2.5 text-left text-sm text-red-400 transition hover:bg-red-500/10"
+      >
+        Logout
+      </button>
+    </form>
   );
 }

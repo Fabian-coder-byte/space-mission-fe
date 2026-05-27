@@ -1,14 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { createMission } from "@/lib/api/missions";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { getOneMission, updateMission } from "@/lib/api/missions";
-import { getAgencies } from "@/lib/api/agency";
-import { getRockets } from "@/lib/api/rockets";
-import { getLaunchSites } from "@/lib/api/launch-sites";
-import { useParams, useRouter } from "next/navigation";
-import DeleteMissionButtonList from "@/components/delete-mission-button-list";
 
 const missionStatusOptions = [
   "SCHEDULED",
@@ -48,65 +44,10 @@ const initialForm = {
   launchSiteId: "",
 };
 
-function toDateTimeLocal(value) {
-  if (!value) return "";
-  return new Date(value).toISOString().slice(0, 16);
-}
-
-export default function EditMissionPage() {
-  const params = useParams();
+export default function NewMissionForm({ agencies = [], rockets = [], launchSites = [] }) {
   const router = useRouter();
-  const id = params.id;
-
   const [form, setForm] = useState(initialForm);
-  const [agencies, setAgencies] = useState([]);
-  const [rockets, setRockets] = useState([]);
-  const [launchSites, setLaunchSites] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    async function load() {
-      try {
-        setIsLoading(true);
-        const [mission, agencyList, rocketList, siteList] = await Promise.all([
-          getOneMission(id),
-          getAgencies(),
-          getRockets(),
-          getLaunchSites(),
-        ]);
-
-        setAgencies(agencyList || []);
-        setRockets(rocketList || []);
-        setLaunchSites(siteList || []);
-
-        setForm({
-          name: mission.name || "",
-          description: mission.description || "",
-          missionType: mission.missionType || "",
-          status: mission.status || "SCHEDULED",
-          launchDate: toDateTimeLocal(mission.launchDate),
-          windowStart: toDateTimeLocal(mission.windowStart),
-          windowEnd: toDateTimeLocal(mission.windowEnd),
-          destination: mission.destination || "",
-          orbit: mission.orbit || "",
-          isCrewed: Boolean(mission.isCrewed),
-          imageUrl: mission.imageUrl || "",
-          detailsUrl: mission.detailsUrl || "",
-          agencyId: mission.agencyId || "",
-          rocketId: mission.rocketId || "",
-          launchSiteId: mission.launchSiteId || "",
-        });
-      } catch (error) {
-        console.error(error);
-        toast.error("Errore durante il caricamento della missione");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    if (id) load();
-  }, [id]);
+  const [isSaving, setIsSaving] = useState(false);
 
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
@@ -119,8 +60,8 @@ export default function EditMissionPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.name.trim()) {
-      toast.error("Il nome è obbligatorio");
+    if (!form.name.trim() || !form.slug.trim()) {
+      toast.error("Nome e slug sono obbligatori");
       return;
     }
 
@@ -143,24 +84,17 @@ export default function EditMissionPage() {
     };
 
     try {
-      setIsSubmitting(true);
-      await updateMission(id, payload);
-      toast.success("Missione aggiornata con successo");
-      router.push(`/admin/missions/${id}`);
+      setIsSaving(true);
+      await createMission(payload);
+      toast.success("Missione creata con successo");
+      router.push("/admin/missions");
+      router.refresh();
     } catch (error) {
       console.error(error);
-      toast.error("Errore durante l'aggiornamento della missione");
+      toast.error("Errore durante la creazione della missione");
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="rounded-3xl border border-slate-800 bg-slate-900/50 p-6 text-slate-300">
-        Caricamento missione...
-      </div>
-    );
   }
 
   return (
@@ -170,41 +104,38 @@ export default function EditMissionPage() {
           <p className="text-xs uppercase tracking-[0.25em] text-cyan-400">
             Admin Panel
           </p>
-          <h1 className="mt-2 text-3xl font-bold text-white">
-            Modifica missione
-          </h1>
+          <h1 className="mt-2 text-3xl font-bold text-white">Crea missione</h1>
           <p className="mt-2 text-sm text-slate-400">
-            Aggiorna i dati principali della missione selezionata.
+            Inserisci i dati principali della nuova missione spaziale.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={`/admin/missions/${id}`}
-            className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
-          >
-            Torna al dettaglio
-          </Link>
-
-          <DeleteMissionButtonList id={id} redirectTo="/admin/missions" size="md" />
-        </div>
+        <Link
+          href="/admin/missions"
+          className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+        >
+          Torna alla lista
+        </Link>
       </div>
 
       <form
         onSubmit={handleSubmit}
         className="grid gap-6 rounded-3xl border border-slate-800 bg-slate-900/50 p-6"
       >
-        <div>
-          <label className="mb-2 block text-sm font-medium text-white">
-            Nome *
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
-          />
+        <div className="grid gap-4 md:grid-cols-1">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-white">
+              Nome *
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Es. Artemis II"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
@@ -229,7 +160,7 @@ export default function EditMissionPage() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-white">
-              Stato
+              Stato *
             </label>
             <select
               name="status"
@@ -268,7 +199,8 @@ export default function EditMissionPage() {
             value={form.description}
             onChange={handleChange}
             rows={5}
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+            placeholder="Descrizione della missione..."
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
           />
         </div>
 
@@ -324,7 +256,7 @@ export default function EditMissionPage() {
               value={form.destination}
               onChange={handleChange}
               placeholder="Es. Moon"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
             />
           </div>
 
@@ -338,7 +270,7 @@ export default function EditMissionPage() {
               value={form.orbit}
               onChange={handleChange}
               placeholder="Es. Low Earth Orbit"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
             />
           </div>
         </div>
@@ -413,7 +345,7 @@ export default function EditMissionPage() {
               value={form.imageUrl}
               onChange={handleChange}
               placeholder="https://..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
             />
           </div>
 
@@ -427,7 +359,7 @@ export default function EditMissionPage() {
               value={form.detailsUrl}
               onChange={handleChange}
               placeholder="https://..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-cyan-400"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
             />
           </div>
         </div>
@@ -435,18 +367,20 @@ export default function EditMissionPage() {
         <div className="flex flex-wrap gap-3 pt-2">
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isSaving}
+            className="rounded-xl bg-cyan-500 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? "Salvataggio..." : "Salva modifiche"}
+            {isSaving ? "Creazione..." : "Crea missione"}
           </button>
 
-          <Link
-            href={`/admin/missions/${id}`}
-            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800"
+          <button
+            type="button"
+            onClick={() => setForm(initialForm)}
+            disabled={isSaving}
+            className="rounded-xl border border-slate-700 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Annulla
-          </Link>
+            Reset
+          </button>
         </div>
       </form>
     </>

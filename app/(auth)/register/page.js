@@ -1,46 +1,59 @@
 "use client";
+
+import { registerApi } from "@/lib/api/auth";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
-  const initialForm = {
-    email: "fakeemail@gmail.com",
-    password: "password",
-  };
-
-  const [form, setForm] = useState(initialForm);
+  const router = useRouter();
+  const [form, setForm] = useState({
+    username: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   function handleChange(e) {
     const { name, value } = e.target;
-
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const payload = {
-      ...form,
-    };
+    if (form.password !== form.confirmPassword) {
+      toast.error("Le password non coincidono");
+      return;
+    }
+
+    if (form.password.length < 6) {
+      toast.error("La password deve essere di almeno 6 caratteri");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const res = await loginApi(payload);
+      await registerApi({
+        email: form.email.trim(),
+        password: form.password,
+        username: form.username.trim() || undefined,
+      });
 
-      console.log(res);
-      toast.success("Login effettuato con successo");
-      console.log("Payload login:", payload);
-
-      // esempio:
-      // router.push("/dashboard");
+      toast.success(
+        "Registrazione completata! Controlla la tua email per confermare l'account.",
+      );
+      router.push("/login");
     } catch (error) {
-      console.error("Errore login:", error);
-      toast.error("Email o password non valide");
+      toast.error(error.message || "Errore durante la registrazione");
+    } finally {
+      setIsLoading(false);
     }
   }
+
   return (
     <div className="w-full max-w-2xl rounded-3xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur sm:p-10">
       <div className="mb-8">
@@ -67,10 +80,11 @@ export default function RegisterPage() {
             </label>
             <input
               id="username"
+              name="username"
               type="text"
-              placeholder="Scegli uno username"
               value={form.username}
               onChange={handleChange}
+              placeholder="Scegli uno username"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />
           </div>
@@ -80,11 +94,13 @@ export default function RegisterPage() {
               htmlFor="email"
               className="mb-2 block text-sm font-medium text-slate-200"
             >
-              Email
+              Email *
             </label>
             <input
               id="email"
+              name="email"
               type="email"
+              required
               value={form.email}
               onChange={handleChange}
               placeholder="Inserisci la tua email"
@@ -97,14 +113,16 @@ export default function RegisterPage() {
               htmlFor="password"
               className="mb-2 block text-sm font-medium text-slate-200"
             >
-              Password
+              Password *
             </label>
             <input
               id="password"
+              name="password"
               type="password"
+              required
               value={form.password}
               onChange={handleChange}
-              placeholder="Crea una password"
+              placeholder="Crea una password (min. 6 caratteri)"
               className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
             />
           </div>
@@ -114,11 +132,13 @@ export default function RegisterPage() {
               htmlFor="confirmPassword"
               className="mb-2 block text-sm font-medium text-slate-200"
             >
-              Conferma password
+              Conferma password *
             </label>
             <input
               id="confirmPassword"
+              name="confirmPassword"
               type="password"
+              required
               value={form.confirmPassword}
               onChange={handleChange}
               placeholder="Ripeti la password"
@@ -127,22 +147,12 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <label className="flex items-start gap-3 text-sm leading-6 text-slate-300">
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-950 text-cyan-500 focus:ring-cyan-400/30"
-          />
-          <span>
-            Accetto i termini e le condizioni e confermo di aver letto la
-            privacy policy.
-          </span>
-        </label>
-
         <button
           type="submit"
-          className="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-500 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+          disabled={isLoading}
+          className="inline-flex w-full items-center justify-center rounded-2xl bg-cyan-500 px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Crea account
+          {isLoading ? "Creazione account..." : "Crea account"}
         </button>
       </form>
 

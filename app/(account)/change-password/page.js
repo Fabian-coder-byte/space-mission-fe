@@ -1,11 +1,54 @@
-import Link from "next/link";
+"use client";
 
-export const metadata = {
-  title: "Cambia password",
-  description: "Aggiorna la password del tuo account.",
-};
+import { useState } from "react";
+import Link from "next/link";
+import { changePassword } from "@/lib/api/profile";
 
 export default function ChangePasswordPage() {
+  const [form, setForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (form.newPassword !== form.confirmPassword) {
+      setError("Le password non coincidono.");
+      return;
+    }
+
+    if (form.newPassword.length < 6) {
+      setError("La nuova password deve essere di almeno 6 caratteri.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await changePassword({
+        currentPassword: form.currentPassword,
+        newPassword: form.newPassword,
+      });
+      setSuccess("Password aggiornata con successo.");
+      setForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      setError(err.message || "Errore durante il cambio password.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <section className="border-b border-slate-800">
@@ -74,7 +117,7 @@ export default function ChangePasswordPage() {
               </p>
             </div>
 
-            <form className="mt-8 space-y-6">
+            <form onSubmit={handleSubmit} className="mt-8 space-y-6">
               <div>
                 <label
                   htmlFor="currentPassword"
@@ -84,8 +127,12 @@ export default function ChangePasswordPage() {
                 </label>
                 <input
                   id="currentPassword"
+                  name="currentPassword"
                   type="password"
+                  value={form.currentPassword}
+                  onChange={handleChange}
                   placeholder="Inserisci la password attuale"
+                  required
                   className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                 />
               </div>
@@ -99,8 +146,12 @@ export default function ChangePasswordPage() {
                 </label>
                 <input
                   id="newPassword"
+                  name="newPassword"
                   type="password"
+                  value={form.newPassword}
+                  onChange={handleChange}
                   placeholder="Inserisci la nuova password"
+                  required
                   className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                 />
               </div>
@@ -114,18 +165,35 @@ export default function ChangePasswordPage() {
                 </label>
                 <input
                   id="confirmPassword"
+                  name="confirmPassword"
                   type="password"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
                   placeholder="Ripeti la nuova password"
+                  required
                   className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                 />
               </div>
 
+              {error && (
+                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                  {success}
+                </div>
+              )}
+
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                  disabled={loading}
+                  className="inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-60"
                 >
-                  Salva nuova password
+                  {loading ? "Salvataggio..." : "Salva nuova password"}
                 </button>
 
                 <Link

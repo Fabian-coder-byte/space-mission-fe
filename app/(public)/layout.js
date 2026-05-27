@@ -1,12 +1,25 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { getMeApi } from "@/lib/api/auth";
 import ProfileMenu from "@/components/profile-menu";
 
-export default function PublicLayout({ children }) {
-  const user = {
-    name: "Pippo Rossi",
-    role: "USER",
-    username: "PIPPO",
-  };
+export default async function PublicLayout({ children }) {
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get("sb_access_token")?.value;
+
+  let user = null;
+  if (accessToken) {
+    const data = await getMeApi(accessToken);
+    if (data?.user) {
+      user = {
+        id: data.user.id,
+        email: data.user.email,
+        name: data.user.userMetadata?.name || data.user.userMetadata?.username || data.user.email?.split("@")[0],
+        username: data.user.userMetadata?.username || data.user.email?.split("@")[0] || "User",
+        role: data.user.role,
+      };
+    }
+  }
 
   return (
     <div className="relative flex min-h-screen flex-col">

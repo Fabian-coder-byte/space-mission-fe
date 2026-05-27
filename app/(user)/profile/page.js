@@ -1,19 +1,84 @@
-import Link from "next/link";
+"use client";
 
-export const metadata = {
-  title: "Profilo",
-  description: "Profilo utente e impostazioni account.",
-};
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getMeApi } from "@/lib/api/auth";
+import { updateProfile } from "@/lib/api/profile";
 
 export default function ProfilePage() {
-  const user = {
-    name: "Pippo Rossi",
-    username: "PIPPO",
-    email: "pippo@email.com",
-    role: "USER",
-    joinedAt: "12 Marzo 2026",
-    bio: "Appassionato di tecnologia, spazio e missioni orbitali.",
-  };
+  const [user, setUser] = useState(null);
+  const [form, setForm] = useState({ name: "", username: "", bio: "" });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const token = localStorage.getItem("sb_access_token");
+        const data = await getMeApi(token);
+        if (data?.user) {
+          const u = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.userMetadata?.name || "",
+            username: data.user.userMetadata?.username || data.user.email?.split("@")[0] || "",
+            bio: data.user.userMetadata?.bio || "",
+            role: data.user.role,
+            createdAt: data.user.createdAt,
+          };
+          setUser(u);
+          setForm({ name: u.name, username: u.username, bio: u.bio });
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      await updateProfile(form);
+      setSuccess("Profilo aggiornato con successo.");
+      setUser((prev) => ({ ...prev, ...form }));
+    } catch (err) {
+      setError(err.message || "Errore durante il salvataggio.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
+    if (user) {
+      setForm({ name: user.name, username: user.username, bio: user.bio });
+    }
+    setError("");
+    setSuccess("");
+  }
+
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
+        Caricamento...
+      </main>
+    );
+  }
+
+  const initials = (user?.username || "U").slice(0, 2).toUpperCase();
+  const joinedAt = user?.createdAt
+    ? new Intl.DateTimeFormat("it-IT", { dateStyle: "long" }).format(new Date(user.createdAt))
+    : "—";
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -40,17 +105,19 @@ export default function ProfilePage() {
             <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
               <div className="flex flex-col items-center text-center">
                 <div className="flex h-24 w-24 items-center justify-center rounded-full bg-cyan-500 text-2xl font-bold text-slate-950">
-                  {user.username.slice(0, 2)}
+                  {initials}
                 </div>
 
                 <h2 className="mt-4 text-2xl font-semibold text-white">
-                  {user.name}
+                  {form.name || user?.username || "—"}
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-400">@{user.username}</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  @{form.username || "—"}
+                </p>
 
                 <span className="mt-4 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-4 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-300">
-                  {user.role}
+                  {user?.role || "USER"}
                 </span>
               </div>
 
@@ -59,14 +126,16 @@ export default function ProfilePage() {
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     Email
                   </p>
-                  <p className="mt-2 text-sm text-slate-200">{user.email}</p>
+                  <p className="mt-2 text-sm text-slate-200">
+                    {user?.email || "—"}
+                  </p>
                 </div>
 
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     Iscritto dal
                   </p>
-                  <p className="mt-2 text-sm text-slate-200">{user.joinedAt}</p>
+                  <p className="mt-2 text-sm text-slate-200">{joinedAt}</p>
                 </div>
               </div>
 
@@ -90,18 +159,16 @@ export default function ProfilePage() {
 
           <div className="space-y-8">
             <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-white">
-                    Informazioni personali
-                  </h2>
-                  <p className="mt-2 text-sm text-slate-400">
-                    Aggiorna i dati principali del tuo account.
-                  </p>
-                </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-white">
+                  Informazioni personali
+                </h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Aggiorna i dati principali del tuo account.
+                </p>
               </div>
 
-              <form className="mt-8 space-y-6">
+              <form onSubmit={handleSubmit} className="mt-8 space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
                     <label
@@ -112,8 +179,10 @@ export default function ProfilePage() {
                     </label>
                     <input
                       id="name"
+                      name="name"
                       type="text"
-                      defaultValue={user.name}
+                      value={form.name}
+                      onChange={handleChange}
                       className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                     />
                   </div>
@@ -127,8 +196,10 @@ export default function ProfilePage() {
                     </label>
                     <input
                       id="username"
+                      name="username"
                       type="text"
-                      defaultValue={user.username}
+                      value={form.username}
+                      onChange={handleChange}
                       className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                     />
                   </div>
@@ -144,8 +215,9 @@ export default function ProfilePage() {
                   <input
                     id="email"
                     type="email"
-                    defaultValue={user.email}
-                    className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                    value={user?.email || ""}
+                    disabled
+                    className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3.5 text-slate-400 outline-none cursor-not-allowed"
                   />
                 </div>
 
@@ -158,22 +230,38 @@ export default function ProfilePage() {
                   </label>
                   <textarea
                     id="bio"
+                    name="bio"
                     rows={5}
-                    defaultValue={user.bio}
+                    value={form.bio}
+                    onChange={handleChange}
                     className="w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 py-3.5 text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
                   />
                 </div>
 
+                {error && (
+                  <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                    {success}
+                  </div>
+                )}
+
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <button
                     type="submit"
-                    className="inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+                    disabled={saving}
+                    className="inline-flex items-center justify-center rounded-2xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:opacity-60"
                   >
-                    Salva modifiche
+                    {saving ? "Salvataggio..." : "Salva modifiche"}
                   </button>
 
                   <button
                     type="button"
+                    onClick={handleCancel}
                     className="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
                   >
                     Annulla
