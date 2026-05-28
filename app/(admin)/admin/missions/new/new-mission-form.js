@@ -44,7 +44,11 @@ const initialForm = {
   launchSiteId: "",
 };
 
-export default function NewMissionForm({ agencies = [], rockets = [], launchSites = [] }) {
+export default function NewMissionForm({
+  agencies = [],
+  rockets = [],
+  launchSites = [],
+}) {
   const router = useRouter();
   const [form, setForm] = useState(initialForm);
   const [isSaving, setIsSaving] = useState(false);
@@ -60,8 +64,8 @@ export default function NewMissionForm({ agencies = [], rockets = [], launchSite
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!form.name.trim() || !form.slug.trim()) {
-      toast.error("Nome e slug sono obbligatori");
+    if (!form.name.trim()) {
+      toast.error("Nome sono obbligatori");
       return;
     }
 

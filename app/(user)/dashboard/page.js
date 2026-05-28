@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { getMeApi } from "@/lib/api/auth";
 import { getFavorites } from "@/lib/api/favorites";
+import { getMissionChartStats } from "@/lib/api/missions";
+
+const LaunchCharts = dynamic(() => import("./LaunchCharts"), { ssr: false });
 
 function getStatusClasses(status) {
   switch (status) {
-    case "Upcoming":
     case "SCHEDULED":
     case "CONFIRMED":
       return "border-cyan-500/30 bg-cyan-500/10 text-cyan-300";
-    case "Planned":
     case "DELAYED":
       return "border-violet-500/30 bg-violet-500/10 text-violet-300";
     case "COMPLETED":
@@ -32,15 +34,17 @@ function formatDate(dateStr) {
 export default function UserDashboardPage() {
   const [user, setUser] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [chartData, setChartData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
         const token = localStorage.getItem("sb_access_token");
-        const [meData, favData] = await Promise.all([
+        const [meData, favData, chartStats] = await Promise.all([
           getMeApi(token),
           getFavorites().catch(() => []),
+          getMissionChartStats().catch(() => null),
         ]);
 
         if (meData?.user) {
@@ -60,6 +64,7 @@ export default function UserDashboardPage() {
         }
 
         setFavorites(Array.isArray(favData) ? favData : []);
+        setChartData(chartStats);
       } finally {
         setLoading(false);
       }
@@ -86,11 +91,9 @@ export default function UserDashboardPage() {
           <p className="text-sm font-medium uppercase tracking-[0.3em] text-cyan-400">
             User Dashboard
           </p>
-
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">
             Benvenuto, {displayName}
           </h1>
-
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
             Qui puoi gestire il tuo profilo, tenere d&apos;occhio le missioni
             salvate e controllare la tua attività recente.
@@ -106,7 +109,6 @@ export default function UserDashboardPage() {
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500 text-xl font-bold text-slate-950">
                   {initials}
                 </div>
-
                 <div>
                   <h2 className="text-xl font-semibold text-white">
                     {displayName}
@@ -126,7 +128,6 @@ export default function UserDashboardPage() {
                     {user?.email || "—"}
                   </p>
                 </div>
-
                 <div>
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
                     Ruolo
@@ -144,7 +145,6 @@ export default function UserDashboardPage() {
                 >
                   Vai al profilo
                 </Link>
-
                 <Link
                   href="/change-password"
                   className="inline-flex items-center justify-center rounded-2xl border border-slate-700 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
@@ -158,7 +158,6 @@ export default function UserDashboardPage() {
               <h3 className="text-lg font-semibold text-white">
                 Azioni rapide
               </h3>
-
               <div className="mt-5 grid gap-3">
                 <Link
                   href="/missions"
@@ -166,19 +165,17 @@ export default function UserDashboardPage() {
                 >
                   Esplora missioni
                 </Link>
-
-                <Link
-                  href="/favorites"
-                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
-                >
-                  Vai ai preferiti
-                </Link>
-
                 <Link
                   href="/rockets"
                   className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
                 >
                   Guarda i razzi
+                </Link>
+                <Link
+                  href="/agencies"
+                  className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
+                >
+                  Agenzie spaziali
                 </Link>
               </div>
             </div>
@@ -192,19 +189,21 @@ export default function UserDashboardPage() {
                   {favorites.length}
                 </p>
               </div>
-
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
+                <p className="text-sm text-slate-400">Lanci imminenti</p>
+                <p className="mt-2 text-3xl font-bold text-white">
+                  {chartData?.upcoming?.length ?? "—"}
+                </p>
+              </div>
               <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
                 <p className="text-sm text-slate-400">Ruolo account</p>
                 <p className="mt-2 text-sm font-bold text-white">
                   {user?.role || "—"}
                 </p>
               </div>
-
-              <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
-                <p className="text-sm text-slate-400">Email verificata</p>
-                <p className="mt-2 text-sm font-bold text-cyan-400">Sì</p>
-              </div>
             </div>
+
+            {chartData && <LaunchCharts data={chartData} />}
 
             <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6">
               <div className="flex items-center justify-between gap-4">
@@ -216,9 +215,8 @@ export default function UserDashboardPage() {
                     Le missioni che hai salvato per seguirle più facilmente.
                   </p>
                 </div>
-
                 <Link
-                  href="/favorites"
+                  href="/profile"
                   className="text-sm font-medium text-cyan-400 transition hover:text-cyan-300"
                 >
                   Vedi tutte
@@ -229,7 +227,10 @@ export default function UserDashboardPage() {
                 {recentFavorites.length === 0 ? (
                   <p className="text-sm text-slate-400">
                     Nessuna missione nei preferiti.{" "}
-                    <Link href="/missions" className="text-cyan-400 hover:text-cyan-300">
+                    <Link
+                      href="/missions"
+                      className="text-cyan-400 hover:text-cyan-300"
+                    >
                       Esplora le missioni
                     </Link>
                   </p>
@@ -253,14 +254,12 @@ export default function UserDashboardPage() {
                               </span>
                             )}
                           </div>
-
                           <h3 className="mt-3 text-xl font-semibold text-white">
                             {fav.launchName}
                           </h3>
                         </div>
-
                         <Link
-                          href={`/launches/${fav.launchId}`}
+                          href={`/missions/${fav.launchId}`}
                           className="inline-flex items-center justify-center rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-cyan-400 hover:text-cyan-400"
                         >
                           Dettagli
