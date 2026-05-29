@@ -2,6 +2,7 @@ import { getMeApi } from "@/lib/api/auth";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import ImportDataPanel from "@/components/ImportDataPanel";
 
 const navItems = [
   { href: "/admin", label: "Dashboard" },
@@ -61,6 +62,8 @@ export default async function AdminLayout({ children }) {
             </div>
 
             <div className="flex items-center gap-3">
+              <ImportDataPanel />
+
               <Link
                 href="/"
                 className="hidden rounded-xl border border-slate-700 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white md:inline-flex"
